@@ -3,8 +3,8 @@ import { AIResponse, GenerateConfig } from '../interfaces/ai-service.interface';
 import { BaseAIService } from './base-ai.service';
 
 /**
- * Base HTTP AI Service Abstract Class
- * Provides shared logic for calling AI services using HTTP (Axios)
+ * HTTP AI 服務基礎抽象類別
+ * 提供使用 HTTP (Axios) 呼叫 AI 服務的共用邏輯
  */
 export abstract class BaseHttpAIService extends BaseAIService {
 
@@ -13,11 +13,11 @@ export abstract class BaseHttpAIService extends BaseAIService {
     }
 
     /**
-     * Generate comment content (shared HTTP logic)
-     * @param systemInstruction - System instruction
-     * @param prompt - Prompt
-     * @param config - Generation configuration (optional)
-     * @returns AI service response
+     * 生成評論內容（共用 HTTP 邏輯）
+     * @param systemInstruction - 系統指令
+     * @param prompt - 提示詞
+     * @param config - 生成設定 (選用)
+     * @returns AI 服務回應
      */
     public async generateComment(
         systemInstruction: string,
@@ -30,7 +30,7 @@ export abstract class BaseHttpAIService extends BaseAIService {
             if (config?.showReviewContent)
                 this.printRequestInfo(systemInstruction, prompt, config);
 
-            // Prepare request
+            // 準備請求
             const url = this.getApiUrl();
             const requestBody = this.getRequestBody(systemInstruction, prompt, config);
             const headers = this.getHeaders();
@@ -38,14 +38,14 @@ export abstract class BaseHttpAIService extends BaseAIService {
                 headers: headers
             };
 
-            // Send request
+            // 發送請求
             const response = await axios.post(
                 url,
                 requestBody,
                 requestOptions
             );
 
-            // Get response content
+            // 取得回應內容
             const content = this.extractContent(response);
 
             if (config?.showReviewContent)
@@ -53,7 +53,7 @@ export abstract class BaseHttpAIService extends BaseAIService {
 
             console.log('✅ Response generated successfully');
 
-            // Get token usage (if implemented)
+            // 取得 Token 使用情況（如果有實作）
             const tokenUsage = this.getTokenUsage(response);
             if (tokenUsage.inputTokens || tokenUsage.outputTokens) {
                 console.log(`📊 Token Usage - Input: ${tokenUsage.inputTokens ?? 'N/A'}, Output: ${tokenUsage.outputTokens ?? 'N/A'}`);
@@ -72,9 +72,9 @@ export abstract class BaseHttpAIService extends BaseAIService {
     }
 
     /**
-     * Extract token usage from response (optionally implemented by subclass)
-     * Default implementation is empty, subclasses should implement based on API response format
-     * @param response - API response object
+     * 提取回應中的 Token 使用情況（由子類別選擇性實作）
+     * 預設實現為空，子類別應該根據 API 回應格式實作
+     * @param response - API 回應物件
      * @returns { inputTokens, outputTokens }
      */
     protected extractTokenUsage(response: any): { inputTokens?: number; outputTokens?: number } {
@@ -82,8 +82,8 @@ export abstract class BaseHttpAIService extends BaseAIService {
     }
 
     /**
-     * Called by generateComment, subclasses should override extractTokenUsage method
-     * @param response - API response object
+     * 由 generateComment 呼叫，子類別應該覆寫 extractTokenUsage 方法
+     * @param response - API 回應物件
      * @returns { inputTokens, outputTokens }
      */
     protected getTokenUsage(response: any): { inputTokens?: number; outputTokens?: number } {
@@ -91,12 +91,12 @@ export abstract class BaseHttpAIService extends BaseAIService {
     }
 
     /**
-     * Get API URL (implemented by subclass)
+     * 取得 API URL (由子類別實作)
      */
     protected abstract getApiUrl(): string;
 
     /**
-     * Get request body (implemented by subclass)
+     * 取得請求內容 (由子類別實作)
      */
     protected abstract getRequestBody(
         systemInstruction: string,
@@ -105,12 +105,12 @@ export abstract class BaseHttpAIService extends BaseAIService {
     ): any;
 
     /**
-     * Get request headers (implemented by subclass)
+     * 取得請求 Headers (由子類別實作)
      */
     protected abstract getHeaders(): any;
 
     /**
-     * Extract content from response (implemented by subclass)
+     * 從回應中提取內容 (由子類別實作)
      */
     protected abstract extractContent(response: any): string;
 }

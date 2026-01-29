@@ -4,18 +4,18 @@ import { BaseDevOpsService } from './base-devops.service';
 import { FileChangeDetail } from '../interfaces/devops-service.interface';
 
 /**
- * GitHub Service Class
- * Handles GitHub-related API operations, including PR change checking and other features
+ * GitHub 服務類別
+ * 處理與 GitHub 相關的 API 操作，包含 PR 變更檢查等功能
  */
 export class GitHubDevOpsService extends BaseDevOpsService {
     private client: Octokit;
 
     /**
-     * Create GitHubDevOpsService instance
-     * @param accessToken - GitHub personal access token (required)
-     * @param baseUrl - Optional GitHub Enterprise API base URL; if not provided or for github.com,
-     *                  will use the default public GitHub API (api.github.com).
-     * @throws {Error} Throws error when accessToken is not provided
+     * 建立 GitHubDevOpsService 實例
+     * @param accessToken - GitHub 個人存取權杖（必要）
+     * @param baseUrl - 可選的 GitHub Enterprise API 根網址；若不提供或為 github.com，
+     *                  會使用預設的 public GitHub API（api.github.com）。
+     * @throws {Error} 當 accessToken 未提供時拋出錯誤
      */
     constructor(accessToken?: string, baseUrl?: string) {
         super(accessToken, baseUrl);
@@ -23,17 +23,17 @@ export class GitHubDevOpsService extends BaseDevOpsService {
         const opts: any = { auth: this.accessToken };
 
         if (baseUrl) {
-            // Normalize baseUrl: trim whitespace and trailing slashes to avoid duplicate slashes
+            // 正規化 baseUrl：去除前後空白與尾端斜線，避免產生重複斜線
             const trimmed = baseUrl.trim().replace(/\/+$/g, '');
             try {
                 const parsed = new URL(trimmed);
-                // If host is github.com, don't override Octokit's default baseUrl (use public API)
+                // 若 host 為 github.com，則不要覆寫 Octokit 的預設 baseUrl（使用 public API）
                 if (!/github\.com$/i.test(parsed.hostname)) {
-                    // Only pass baseUrl to Octokit for Enterprise or custom API hosts
+                    // 針對企業版（Enterprise）或自訂 API 主機，才將 baseUrl 傳給 Octokit
                     opts.baseUrl = trimmed;
                 }
             } catch (e) {
-                // If not a complete URL, use the trimmed string directly (preserve user input format)
+                // 若不是完整 URL，則直接使用 trim 後的字串（保留使用者輸入的原始樣式）
                 opts.baseUrl = trimmed;
             }
         }
@@ -42,22 +42,22 @@ export class GitHubDevOpsService extends BaseDevOpsService {
     }
 
     /**
-     * Get service provider name
-     * @returns Service provider name
+     * 取得服務提供者名稱
+     * @returns 服務提供者名稱
      */
     protected getProviderName(): string {
         return 'GitHub';
     }
 
     /**
-     * Add Pull Request comment (using GitHub issues API)
-     * @param projectName - Project name (GitHub does not use this parameter)
-     * @param repositoryId - owner/repo format
-     * @param pullRequestId - PR number
-     * @param content - Comment content
-     * @param commentHeader - Comment header
-     * @returns ID of the added comment
-     * @throws {Error} Throws error when format is invalid or addition fails
+     * 新增 Pull Request 評論（使用 GitHub issues API）
+     * @param projectName - 專案名稱（GitHub 不使用此參數）
+     * @param repositoryId - owner/repo 格式
+     * @param pullRequestId - PR 編號
+     * @param content - 評論內容
+     * @param commentHeader - 評論標題
+     * @returns 新增評論的 ID
+     * @throws {Error} 當格式不符或新增失敗時拋出錯誤
      */
     public async addPullRequestComment(
         projectName: string,
@@ -70,7 +70,7 @@ export class GitHubDevOpsService extends BaseDevOpsService {
 
         const { owner, repo } = this.parseOwnerRepo(repositoryId);
 
-        // Write comment content
+        // 寫入評論內容
         const commentContent = commentHeader ? `# ${commentHeader}\n${content}` : content;
 
         const res = await this.client.rest.issues.createComment({
@@ -90,15 +90,15 @@ export class GitHubDevOpsService extends BaseDevOpsService {
     }
 
     /**
-     * Get Pull Request changed files and content
-     * @param projectName - Project name (GitHub does not use this parameter)
-     * @param repositoryId - owner/repo format
-     * @param pullRequestId - PR number
-     * @param fileExtensions - List of file extensions to include (e.g., ['.ts']), empty means all non-binary files
-     * @param binaryExtensions - List of binary file extensions to exclude
-     * @param enableThrottleMode - Throttle mode: true means only get diff (patch), false means get full file content
-     * @param enableIncrementalDiff - Enable incremental diff mode (default false, checks all PR changes; true checks only latest push changes)
-     * @returns Array of change details in format { path, changeType, content }, returns null if no changes
+     * 取得 Pull Request 的變更檔案與內容
+     * @param projectName - 專案名稱（GitHub 不使用此參數）
+     * @param repositoryId - owner/repo 格式
+     * @param pullRequestId - PR 編號
+     * @param fileExtensions - 要包含的副檔名列表（例如 ['.ts']），若為空則表示所有非二進位檔案
+     * @param binaryExtensions - 要排除的二進位副檔名列表
+     * @param enableThrottleMode - 節流模式：true 表示僅取差異 (patch)，false 表示取完整檔案內容
+     * @param enableIncrementalDiff - 啟用增量 Diff 模式（預設 false，檢查所有 PR 變更；true 則僅檢查最後一次推送的變更）
+     * @returns 變更詳細資訊陣列，格式為 { path, changeType, content }，若無變更則返回 null
      */
     public async getPullRequestChanges(
         projectName: string,
@@ -109,10 +109,10 @@ export class GitHubDevOpsService extends BaseDevOpsService {
         enableThrottleMode: boolean = true,
         enableIncrementalDiff: boolean = false
     ): Promise<FileChangeDetail[] | null> {
-        // Ensure binary file extensions have default values
+        // 確保二進位檔案副檔名有預設值
         binaryExtensions = this.ensureBinaryExtensions(binaryExtensions);
 
-        // Log processing start
+        // 記錄開始處理
         this.logRetrievingChangesStart(
             projectName,
             repositoryId,
@@ -157,17 +157,17 @@ export class GitHubDevOpsService extends BaseDevOpsService {
 
             const fileExt = path.extname(entry.path).toLowerCase();
 
-            // Exclude if no patch and is binary file
+            // 如果沒有 patch 且是二進位檔案，則排除
             if (!entry.patch && binaryExtensions.includes(fileExt)) {
                 return false;
             }
 
-            // Use base class filtering logic
+            // 使用基礎類別的過濾邏輯
             if (!this.shouldIncludeFile(entry.path, fileExtensions, binaryExtensions)) {
                 return false;
             }
 
-            // Include if has patch or not a binary file
+            // 若有 patch 或不是二進位檔案，則包含
             return !!entry.patch || !binaryExtensions.includes(fileExt);
         });
 
@@ -219,10 +219,10 @@ export class GitHubDevOpsService extends BaseDevOpsService {
     //#region Private Methods
 
     /**
-     * Parse repositoryId (owner/repo)
-     * @param repositoryId - Expected format "owner/repo"
+     * 解析 repositoryId (owner/repo)
+     * @param repositoryId - 期望格式為 "owner/repo"
      * @returns { owner, repo }
-     * @throws Throws error when format is invalid
+     * @throws 當格式不符時會丟出錯誤
      */
     private parseOwnerRepo(repositoryId: string): { owner: string; repo: string } {
         const parts = repositoryId.split('/');
@@ -233,12 +233,12 @@ export class GitHubDevOpsService extends BaseDevOpsService {
     }
 
     /**
-     * Get GitHub file content and decode (base64)
+     * 取得 GitHub 檔案內容並解碼（base64）
      * @param owner - repository owner
-     * @param repo - repository name
-     * @param filepath - file path
-     * @param ref - commit SHA or branch
-     * @returns file content
+     * @param repo - repository 名稱
+     * @param filepath - 檔案路徑
+     * @param ref - commit SHA 或 branch
+     * @returns 檔案內容
      */
     private async getGitHubFileContent(
         owner: string,

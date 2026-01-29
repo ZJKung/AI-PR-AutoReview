@@ -3,18 +3,18 @@ import { AIResponse, GenerateConfig } from '../interfaces/ai-service.interface';
 import { BaseAIService } from './base-ai.service';
 
 /**
- * Base Service Class for OpenAI Compatible API
- * This class provides shared logic for services using OpenAI API format (such as OpenAI, Grok, etc.)
+ * OpenAI 相容 API 的基礎服務類別
+ * 此類別提供共用的邏輯給使用 OpenAI API 格式的服務（如 OpenAI、Grok 等）
  */
 export abstract class BaseOpenAICompatibleService extends BaseAIService {
     protected baseURL?: string;
 
     /**
-     * Create OpenAI compatible service instance
-     * @param apiKey - API key
-     * @param model - Model name
-     * @param baseURL - API endpoint URL (optional)
-     * @throws {Error} Throws error when apiKey or model is not provided
+     * 建立 OpenAI 相容服務實例
+     * @param apiKey - API 金鑰
+     * @param model - 模型名稱
+     * @param baseURL - API 端點 URL（選用）
+     * @throws {Error} 當 apiKey 或 model 未提供時拋出錯誤
      */
     constructor(apiKey: string, model: string, baseURL?: string) {
         super(apiKey, model);
@@ -22,11 +22,11 @@ export abstract class BaseOpenAICompatibleService extends BaseAIService {
     }
 
     /**
-     * Generate comment content
-     * @param systemInstruction - System instruction
-     * @param prompt - Prompt
-     * @param config - Generation configuration (optional)
-     * @returns AI service response
+     * 生成評論內容
+     * @param systemInstruction - 系統指令
+     * @param prompt - 提示詞
+     * @param config - 生成設定 (選用)
+     * @returns AI 服務回應
      */
     public async generateComment(
         systemInstruction: string,
@@ -39,7 +39,7 @@ export abstract class BaseOpenAICompatibleService extends BaseAIService {
             if (config?.showReviewContent)
                 this.printRequestInfo(systemInstruction, prompt, config);
 
-            // Create OpenAI client
+            // 建立 OpenAI 客戶端
             const clientOptions: any = { apiKey: this.apiKey };
             if (this.baseURL) {
                 clientOptions.baseURL = this.baseURL;
@@ -47,7 +47,7 @@ export abstract class BaseOpenAICompatibleService extends BaseAIService {
             const client = new OpenAI(clientOptions);
             const requestOptions = this.getRequestOptions(systemInstruction, prompt, config);
 
-            // Get response content
+            // 取得回應內容
             const response = await client.chat.completions.create(requestOptions);
             const content = response.choices?.[0]?.message?.content || 'No response generated';
 
@@ -56,7 +56,7 @@ export abstract class BaseOpenAICompatibleService extends BaseAIService {
 
             console.log('✅ Response generated successfully');
 
-            // Get token usage
+            // 取得 Token 使用情況
             const tokenUsage = this.extractTokenUsage(response);
             if (tokenUsage.inputTokens || tokenUsage.outputTokens) {
                 console.log(`📊 Token Usage - Input: ${tokenUsage.inputTokens ?? 'N/A'}, Output: ${tokenUsage.outputTokens ?? 'N/A'}`);
@@ -75,11 +75,11 @@ export abstract class BaseOpenAICompatibleService extends BaseAIService {
     }
 
     /**
-     * Prepare OpenAI request parameters
-     * @param systemInstruction - System instruction
-     * @param prompt - Prompt
-     * @param config - Generation configuration (optional)
-     * @returns OpenAI request parameters
+     * 準備 OpenAI 請求參數
+     * @param systemInstruction - 系統指令
+     * @param prompt - 提示詞
+     * @param config - 生成設定 (選用)
+     * @returns OpenAI 請求參數
      */
     private getRequestOptions(
         systemInstruction: string,
@@ -88,7 +88,7 @@ export abstract class BaseOpenAICompatibleService extends BaseAIService {
     ): OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming {
         const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [];
 
-        // Prepare request content
+        // 準備請求內容
         messages.push({ role: 'user', content: prompt });
 
         if (systemInstruction && systemInstruction.trim() !== '') {
@@ -102,7 +102,7 @@ export abstract class BaseOpenAICompatibleService extends BaseAIService {
 
         if (!config) return requestOptions;
 
-        // If configuration is provided, add generation settings
+        // 若有提供設定，則加入生成設定
         if (config.temperature !== undefined) {
             requestOptions.temperature = config.temperature;
         }
@@ -114,9 +114,9 @@ export abstract class BaseOpenAICompatibleService extends BaseAIService {
     }
 
     /**
-     * Extract token usage from OpenAI API response
-     * @param response - OpenAI API response
-     * @returns Token usage { inputTokens, outputTokens }
+     * 從 OpenAI API 回應中提取 Token 使用情況
+     * @param response - OpenAI API 回應
+     * @returns Token 使用情況 { inputTokens, outputTokens }
      */
     protected extractTokenUsage(response: any): { inputTokens?: number; outputTokens?: number } {
         return {

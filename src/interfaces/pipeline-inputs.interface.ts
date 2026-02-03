@@ -1,42 +1,42 @@
 /**
- * Azure DevOps Pipeline 輸入參數介面
+ * Azure DevOps Pipeline input parameters interface
  */
 export interface PipelineInputs {
-    /** AI 提供者名稱 */
+    /** AI provider name */
     aiProvider: string;
-    /** AI 模型名稱 */
+    /** AI model name */
     modelName: string;
-    /** AI 模型 API 金鑰 */
+    /** AI model API key */
     modelKey: string;
-    /** 系統指令 */
+    /** System instruction */
     systemInstruction: string;
-    /** 提示詞範本 */
+    /** Prompt template */
     promptTemplate: string;
-    /** 最大輸出 token 數 */
+    /** Maximum output token count */
     maxOutputTokens: number;
-    /** 溫度值 (隨機性) */
+    /** Temperature value (randomness) */
     temperature: number;
-    /** 要包含的檔案副檔名列表 */
+    /** List of file extensions to include */
     fileExtensions: string[];
-    /** 要排除的二進位檔案副檔名列表 */
+    /** List of binary file extensions to exclude */
     binaryExtensions: string[];
-    /** 啟用 AI 節流模式（預設 true，僅送差異；false 則送整個檔案） */
+    /** Enable AI throttle mode (default true, send diff only; false sends full file) */
     enableThrottleMode: boolean;
-    /** 顯示審核內容（預設 false，不顯示；true 則 print 出送給 AI 以及回應的內容） */
+    /** Show review content (default false, don't show; true prints content sent to AI and response) */
     showReviewContent: boolean;
-    /** 啟用增量 Diff 模式（預設 false，檢查所有 PR 變更；true 則僅檢查最後一次推送的變更） */
+    /** Enable incremental Diff mode (default false, check all PR changes; true checks only the last push changes) */
     enableIncrementalDiff: boolean;
 }
 
 /**
- * Azure DevOps 連線資訊介面
+ * Azure DevOps connection information interface
  */
 export interface DevOpsConnection {
-    /** 存取權杖 */
+    /** Access token */
     accessToken: string;
-    /** 組織 URL */
+    /** Organization URL */
     collectionUri: string;
-    /** 專案名稱 */
+    /** Project name */
     projectName: string;
     /** Repository ID */
     repositoryId: string;

@@ -1,7 +1,7 @@
 import { DevOpsProviderService } from '../src/services/devops-provider.service';
 
 async function run() {
-    // 初始化 DevOps API
+    // Initialize DevOps API
     const accessToken = process.env.DevOpsAccessToken;
     const organizationUrl = process.env.DevOpsOrgUrl;
     
@@ -13,18 +13,18 @@ async function run() {
     });
     const devOpsService = devOpsProvider.getService(provider);
 
-    // DevOps 相關設定
+    // DevOps related configuration
     const projectName = process.env.DevOpsProjectName || '';
     const repositoryId = process.env.DevOpsRepositoryId || '';
     const pullRequestId = +(process.env.DevOpsPRId || '0');
 
-    // 新增 AI 分析結果為 PR 評論
-    const commentHeader = `自動化評論標頭`;
+    // Add AI analysis result as PR comment
+    const commentHeader = `Automated Comment Header`;
     await devOpsService.addPullRequestComment(
         projectName,
         repositoryId,
         pullRequestId,
-        `這是一則來自自動化工具的評論範例**測試內容**\n- 建議 1:請根據實際分析結果進行修改。`,
+        `This is a sample comment from the automation tool **Test Content**\n- Suggestion 1: Please modify according to actual analysis results.`,
         commentHeader
     );
 }

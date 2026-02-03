@@ -5,15 +5,15 @@ import { GrokService } from './grok.service';
 import { ClaudeService } from './claude.service';
 
 /**
- * AI 服務提供者類別
- * 統一管理所有 AI 服務的建立和存取
+ * AI Service Provider Class
+ * Centrally manages the creation and access of all AI services
  */
 export class AIProviderService {
     private services: Map<string, AIService>;
     private configs: Map<string, AIServiceConfig>;
 
     /**
-     * 建立 AI 服務提供者實例
+     * Create AI Service Provider instance
      */
     constructor() {
         this.services = new Map();
@@ -21,10 +21,10 @@ export class AIProviderService {
     }
 
     /**
-     * 註冊 AI 服務設定
-     * @param provider - AI 服務提供者名稱
-     * @param config - AI 服務設定
-     * @throws {Error} 當設定無效時拋出錯誤
+     * Register AI service configuration
+     * @param provider - AI service provider name
+     * @param config - AI service configuration
+     * @throws {Error} Throws error when configuration is invalid
      */
     public registerService(provider: string, config: AIServiceConfig): void {
         if (!config.apiKey || config.apiKey.trim() === '') {
@@ -39,26 +39,26 @@ export class AIProviderService {
     }
 
     /**
-     * 取得 AI 服務實例
-     * @param provider - AI 服務提供者名稱
-     * @returns AI 服務實例
-     * @throws {Error} 當提供者不支援或未註冊時拋出錯誤
+     * Get AI service instance
+     * @param provider - AI service provider name
+     * @returns AI service instance
+     * @throws {Error} Throws error when provider is unsupported or not registered
      */
     public getService(provider: string): AIService {
         const normalizedProvider = provider.toLowerCase();
 
-        // 檢查是否已有實例
+        // Check if instance already exists
         if (this.services.has(normalizedProvider)) {
             return this.services.get(normalizedProvider)!;
         }
 
-        // 檢查是否有設定
+        // Check if configuration exists
         const config = this.configs.get(normalizedProvider);
         if (!config) {
             throw new Error(`⛔ Service ${provider} is not registered`);
         }
 
-        // 建立新實例
+        // Create new instance
         let service: AIService;
         switch (normalizedProvider) {
             case 'google':
@@ -77,23 +77,23 @@ export class AIProviderService {
                 throw new Error(`⛔ Unsupported AI provider: ${provider}`);
         }
 
-        // 快取實例
+        // Cache instance
         this.services.set(normalizedProvider, service);
         return service;
     }
 
     /**
-     * 檢查服務是否已註冊
-     * @param provider - AI 服務提供者名稱
-     * @returns 是否已註冊
+     * Check if service is registered
+     * @param provider - AI service provider name
+     * @returns Whether service is registered
      */
     public hasService(provider: string): boolean {
         return this.configs.has(provider.toLowerCase());
     }
 
     /**
-     * 移除服務註冊
-     * @param provider - AI 服務提供者名稱
+     * Remove service registration
+     * @param provider - AI service provider name
      */
     public removeService(provider: string): void {
         const normalizedProvider = provider.toLowerCase();

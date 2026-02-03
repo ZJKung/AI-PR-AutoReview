@@ -1,7 +1,7 @@
 import { DevOpsProviderService } from '../src/services/devops-provider.service';
 
 async function run() {
-    // 初始化 DevOps API
+    // Initialize DevOps API
     const accessToken = process.env.DevOpsAccessToken;
     const organizationUrl = process.env.DevOpsOrgUrl;
     
@@ -13,7 +13,7 @@ async function run() {
     });
     const devOpsService = devOpsProvider.getService(provider);
 
-    // DevOps 相關設定
+    // DevOps related configuration
     const projectName = process.env.DevOpsProjectName || '';
     const repositoryId = process.env.DevOpsRepositoryId || '';
     const pullRequestId = +(process.env.DevOpsPRId || '0');
@@ -21,25 +21,25 @@ async function run() {
     const binaryExtensions = process.env.BinaryExtensions?.split(',').filter(ext => ext) || [];
     const enableThrottleMode = (process.env.EnableThrottleMode ?? 'true').toLowerCase() === 'true';
 
-    // 取得 PR 變更檔案
+    // Get PR changed files
     const changes = await devOpsService.getPullRequestChanges(
         projectName,
         repositoryId,
         pullRequestId,
-        fileExtensions,  // 要包含的檔案類型
-        binaryExtensions,  // 要排除的檔案類型
-        enableThrottleMode  // 節流模式
+        fileExtensions,  // File types to include
+        binaryExtensions,  // File types to exclude
+        enableThrottleMode  // Throttle mode
     );
 
     if (!changes) {
-        console.log('❌ 沒有找到符合條件的變更檔案');
+        console.log('❌ No matching changed files found');
         return;
     }
 
     for (const change of changes) {
-        console.log(`🔍 檔案路徑: ${change.path}`);
-        console.log(`📝 變更類型: ${change.changeType}`);
-        console.log(`📄 檔案內容:\n${change.content}\n`);
+        console.log(`🔍 File path: ${change.path}`);
+        console.log(`📝 Change type: ${change.changeType}`);
+        console.log(`📄 File content:\n${change.content}\n`);
     }
 }
 

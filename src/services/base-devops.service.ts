@@ -2,7 +2,7 @@ import path from 'path';
 import { DevOpsService, FileChangeDetail } from '../interfaces/devops-service.interface';
 
 /**
- * 預設的二進位檔案副檔名列表
+ * Default binary file extension list
  */
 export const DEFAULT_BINARY_EXTENSIONS: string[] = [
     '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.ico', '.webp',
@@ -15,18 +15,18 @@ export const DEFAULT_BINARY_EXTENSIONS: string[] = [
 ] as const;
 
 /**
- * DevOps 服務基礎抽象類別
- * 提供共用的功能給所有 DevOps 服務實作
+ * DevOps service base abstract class
+ * Provides common functionality for all DevOps service implementations
  */
 export abstract class BaseDevOpsService implements DevOpsService {
     protected accessToken: string;
     protected organizationUrl?: string;
 
     /**
-     * 建立 DevOps 服務基礎實例
-     * @param accessToken - 存取權杖
-     * @param organizationUrl - 組織 URL（選用）
-     * @throws {Error} 當 accessToken 未提供時拋出錯誤
+     * Create DevOps service base instance
+     * @param accessToken - Access token
+     * @param organizationUrl - Organization URL (optional)
+     * @throws {Error} When accessToken is not provided
      */
     constructor(accessToken?: string, organizationUrl?: string) {
         if (!accessToken) {
@@ -42,19 +42,19 @@ export abstract class BaseDevOpsService implements DevOpsService {
     }
 
     /**
-     * 取得服務提供者名稱（由子類別實作）
-     * @returns 服務提供者名稱
+     * Get service provider name (implemented by subclass)
+     * @returns Service provider name
      */
     protected abstract getProviderName(): string;
 
     /**
-     * 新增 Pull Request 評論（由子類別實作）
-     * @param projectName - 專案名稱
+     * Add Pull Request comment (implemented by subclass)
+     * @param projectName - Project name
      * @param repositoryId - Repository ID
      * @param pullRequestId - Pull Request ID
-     * @param content - 評論內容
-     * @param commentHeader - 評論標題
-     * @returns 評論的 ID
+     * @param content - Comment content
+     * @param commentHeader - Comment header
+     * @returns Comment ID
      */
     public abstract addPullRequestComment(
         projectName: string,
@@ -65,15 +65,15 @@ export abstract class BaseDevOpsService implements DevOpsService {
     ): Promise<number>;
 
     /**
-     * 取得 Pull Request 變更的檔案內容（由子類別實作）
-     * @param projectName - 專案名稱
+     * Get Pull Request changed file contents (implemented by subclass)
+     * @param projectName - Project name
      * @param repositoryId - Repository ID
      * @param pullRequestId - Pull Request ID
-     * @param fileExtensions - 要過濾的副檔名列表
-     * @param binaryExtensions - 要排除的二進位檔案副檔名列表
-     * @param enableThrottleMode - 啟用節流模式
-     * @param enableIncrementalDiff - 啟用增量 Diff 模式（僅檢查最後一次推送的變更）
-     * @returns 變更內容的詳細資訊陣列
+     * @param fileExtensions - List of file extensions to filter
+     * @param binaryExtensions - List of binary file extensions to exclude
+     * @param enableThrottleMode - Enable throttle mode
+     * @param enableIncrementalDiff - Enable incremental Diff mode (only check the last push changes)
+     * @returns Array of change detail information
      */
     public abstract getPullRequestChanges(
         projectName: string,
@@ -86,13 +86,13 @@ export abstract class BaseDevOpsService implements DevOpsService {
     ): Promise<FileChangeDetail[] | null>;
 
     /**
-     * 記錄開始取得 PR 變更的訊息
-     * @param projectName - 專案名稱
+     * Log message for starting to get PR changes
+     * @param projectName - Project name
      * @param repositoryId - Repository ID
      * @param pullRequestId - Pull Request ID
-     * @param fileExtensions - 要過濾的副檔名列表
-     * @param binaryExtensions - 要排除的二進位檔案副檔名列表
-     * @param enableThrottleMode - 啟用節流模式
+     * @param fileExtensions - List of file extensions to filter
+     * @param binaryExtensions - List of binary file extensions to exclude
+     * @param enableThrottleMode - Enable throttle mode
      */
     protected logRetrievingChangesStart(
         projectName: string,
@@ -120,9 +120,9 @@ export abstract class BaseDevOpsService implements DevOpsService {
     }
 
     /**
-     * 記錄完成取得 PR 變更的訊息
-     * @param fileCount - 處理的檔案數量
-     * @param enableThrottleMode - 啟用節流模式
+     * Log completion message for getting PR changes
+     * @param fileCount - Number of files processed
+     * @param enableThrottleMode - Enable throttle mode
      */
     protected logRetrievingChangesComplete(fileCount: number, enableThrottleMode: boolean): void {
         if (enableThrottleMode) {
@@ -133,14 +133,14 @@ export abstract class BaseDevOpsService implements DevOpsService {
     }
 
     /**
-     * 記錄無變更的訊息
+     * Log message for no changes
      */
     protected logNoChanges(): void {
         console.log('❗ No matching code changes detected');
     }
 
     /**
-     * 記錄開始新增評論的訊息
+     * Log message for starting to add comment
      */
     protected logAddCommentStart(): void {
         console.log('🚩 Adding Pull Request comment...');
@@ -148,17 +148,17 @@ export abstract class BaseDevOpsService implements DevOpsService {
     }
 
     /**
-     * 記錄成功新增評論的訊息
-     * @param id - 評論 ID
+     * Log success message for adding comment
+     * @param id - Comment ID
      */
     protected logAddCommentSuccess(id: number): void {
         console.log(`✅ Successfully added comment, ID: ${id}`);
     }
 
     /**
-     * 確保二進位檔案副檔名列表有預設值
-     * @param binaryExtensions - 輸入的二進位檔案副檔名列表
-     * @returns 處理後的二進位檔案副檔名列表
+     * Ensure binary file extension list has default values
+     * @param binaryExtensions - Input binary file extension list
+     * @returns Processed binary file extension list
      */
     protected ensureBinaryExtensions(binaryExtensions?: string[]): string[] {
         if (!binaryExtensions || binaryExtensions.length === 0) {
@@ -168,11 +168,11 @@ export abstract class BaseDevOpsService implements DevOpsService {
     }
 
     /**
-     * 檢查檔案是否應該被過濾（基於副檔名）
-     * @param filePath - 檔案路徑
-     * @param fileExtensions - 要包含的副檔名列表
-     * @param binaryExtensions - 要排除的二進位檔案副檔名列表
-     * @returns true 表示應該包含此檔案，false 表示應該過濾掉
+     * Check if file should be filtered (based on extension)
+     * @param filePath - File path
+     * @param fileExtensions - List of extensions to include
+     * @param binaryExtensions - List of binary file extensions to exclude
+     * @returns true means include this file, false means filter out
      */
     protected shouldIncludeFile(
         filePath: string,
@@ -181,25 +181,25 @@ export abstract class BaseDevOpsService implements DevOpsService {
     ): boolean {
         const fileExt = path.extname(filePath).toLowerCase();
 
-        // 排除二進位檔案
+        // Exclude binary files
         if (binaryExtensions.includes(fileExt)) {
             return false;
         }
 
-        // 如果有指定副檔名，只包含符合的檔案
+        // If extensions are specified, only include matching files
         if (fileExtensions.length > 0) {
             return fileExtensions.includes(fileExt);
         }
 
-        // 沒有指定副檔名時，包含所有非二進位檔案
+        // When no extensions specified, include all non-binary files
         return true;
     }
 
     /**
-     * 記錄檔案過濾結果
-     * @param totalFiles - 總檔案數
-     * @param filteredFiles - 過濾後的檔案數
-     * @param filePaths - 要處理的檔案路徑列表
+     * Log file filtering results
+     * @param totalFiles - Total file count
+     * @param filteredFiles - Filtered file count
+     * @param filePaths - List of file paths to process
      */
     protected logFilterResult(totalFiles: number, filteredFiles: number, filePaths: string[]): void {
         console.log(`🔍 Total changed files: ${totalFiles}, after filtering, ${filteredFiles} file changes remaining`);
@@ -207,9 +207,9 @@ export abstract class BaseDevOpsService implements DevOpsService {
     }
 
     /**
-     * 格式化新增檔案的內容（每行前面加上 + 符號）
-     * @param content - 原始檔案內容
-     * @returns 格式化後的內容
+     * Format added file content (add + symbol before each line)
+     * @param content - Original file content
+     * @returns Formatted content
      */
     protected formatAddedFileContent(content: string): string {
         return content
@@ -219,10 +219,10 @@ export abstract class BaseDevOpsService implements DevOpsService {
     }
 
     /**
-     * 處理 git diff 或 patch 輸出結果（已優化以減少 Token 消耗）
-     * 移除空白行、註釋和多餘的上下文
-     * @param output - git diff 或 patch 命令的輸出內容
-     * @returns 處理後的差異內容，只包含變更行和區塊標記
+     * Process git diff or patch output (optimized to reduce Token consumption)
+     * Remove blank lines, comments and redundant context
+     * @param output - Output content from git diff or patch command
+     * @returns Processed diff content, containing only changed lines and block markers
      */
     protected processDiffOutput(output: string): string {
         const lines = output.split('\n');
@@ -236,9 +236,9 @@ export abstract class BaseDevOpsService implements DevOpsService {
                 line.startsWith('-') ||
                 line.startsWith('@@')
             )
-            // 移除空白行和只有空白的行
+            // Remove blank lines and lines with only whitespace
             .filter(line => line.trim().length > 1 || line.startsWith('@@'))
-            // 移除開頭和結尾的空白
+            // Remove leading and trailing whitespace
             .map(line => {
                 if (line.startsWith('+') || line.startsWith('-')) {
                     return line.substring(0, 1) + line.substring(1).trim();
@@ -249,9 +249,9 @@ export abstract class BaseDevOpsService implements DevOpsService {
     }
 
     /**
-     * 記錄檔案處理進度（針對新增檔案）
-     * @param filePath - 檔案路徑
-     * @param enableThrottleMode - 是否啟用節流模式
+     * Log file processing progress (for added files)
+     * @param filePath - File path
+     * @param enableThrottleMode - Enable throttle mode
      */
     protected logProcessAddedFile(filePath: string, enableThrottleMode: boolean): void {
         if (enableThrottleMode) {
@@ -262,9 +262,9 @@ export abstract class BaseDevOpsService implements DevOpsService {
     }
 
     /**
-     * 記錄檔案處理進度（針對編輯檔案）
-     * @param filePath - 檔案路徑
-     * @param enableThrottleMode - 是否啟用節流模式
+     * Log file processing progress (for edited files)
+     * @param filePath - File path
+     * @param enableThrottleMode - Enable throttle mode
      */
     protected logProcessEditedFile(filePath: string, enableThrottleMode: boolean): void {
         if (enableThrottleMode) {

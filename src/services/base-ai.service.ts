@@ -1,18 +1,18 @@
 import { AIService, GenerateConfig } from '../interfaces/ai-service.interface';
 
 /**
- * AI 服務基礎抽象類別
- * 提供共用的功能給所有 AI 服務實作
+ * AI service base abstract class
+ * Provides common functionality for all AI service implementations
  */
 export abstract class BaseAIService implements AIService {
     protected apiKey: string;
     protected model: string;
 
     /**
-     * 建立 AI 服務基礎實例
-     * @param apiKey - API 金鑰
-     * @param model - 模型名稱
-     * @throws {Error} 當 apiKey 或 model 未提供時拋出錯誤
+     * Create AI service base instance
+     * @param apiKey - API key
+     * @param model - Model name
+     * @throws {Error} When apiKey or model is not provided
      */
     constructor(apiKey: string, model: string) {
         if (!apiKey || apiKey.trim() === '') {
@@ -28,8 +28,8 @@ export abstract class BaseAIService implements AIService {
     }
 
     /**
-     * 紀錄生成開始的摘要資訊（共用）
-     * @param config - 生成設定
+     * Log generation start summary information (shared)
+     * @param config - Generation configuration
      */
     protected logGenerationStart(config?: GenerateConfig): void {
         console.log(`🚩 Generating response using ${this.getServiceName()}...`);
@@ -40,17 +40,17 @@ export abstract class BaseAIService implements AIService {
     }
 
     /**
-     * 取得服務名稱（由子類別實作）
-     * @returns 服務名稱
+     * Get service name (implemented by subclass)
+     * @returns Service name
      */
     protected abstract getServiceName(): string;
 
     /**
-     * 生成評論內容（由子類別實作）
-     * @param systemInstruction - 系統指令
-     * @param prompt - 提示詞
-     * @param config - 生成設定 (選用)
-     * @returns AI 服務回應
+     * Generate comment content (implemented by subclass)
+     * @param systemInstruction - System instruction
+     * @param prompt - Prompt
+     * @param config - Generation configuration (optional)
+     * @returns AI service response
      */
     public abstract generateComment(
         systemInstruction: string,
@@ -59,10 +59,10 @@ export abstract class BaseAIService implements AIService {
     ): Promise<any>;
 
     /**
-     * 印出送給 AI 的請求資訊
-     * @param systemInstruction - 系統指令
-     * @param prompt - 提示詞
-     * @param config - 生成設定
+     * Print request information sent to AI
+     * @param systemInstruction - System instruction
+     * @param prompt - Prompt
+     * @param config - Generation configuration
      */
     protected printRequestInfo(systemInstruction: string, prompt: string, config: GenerateConfig): void {
         console.log('\n' + '='.repeat(80));
@@ -82,8 +82,8 @@ export abstract class BaseAIService implements AIService {
     }
 
     /**
-     * 印出 AI 的回應資訊
-     * @param content - AI 回應內容
+     * Print AI response information
+     * @param content - AI response content
      */
     protected printResponseInfo(content: string): void {
         console.log('\n' + '='.repeat(80));

@@ -3,9 +3,9 @@
 /// <reference types="node" />
 
 /**
- * 測試/驗證工具: 指定 DevOps PR ID 進行代碼審查功能測試
+ * Test/Verification Tool: Perform code review functionality test for specified DevOps PR ID
  *
- * 使用方式:
+ * Usage:
  *   npx ts-node DEVSCRIPTS/test-pr-review.ts --provider azure --pr 123 --ai claude
  *   npx ts-node DEVSCRIPTS/test-pr-review.ts --provider github --owner USER --repo REPO --pr 456 --ai openai
  */
@@ -46,7 +46,7 @@ class PRReviewTester {
     }
 
     /**
-     * 解析命令行參數
+     * Parse command line arguments
      */
     static parseArgs(args: string[]): TestOptions {
         const options: any = {
@@ -64,77 +64,77 @@ class PRReviewTester {
             const value = args[i + 1];
 
             switch (arg) {
-                // 指定 DevOps 提供者 (azure 或 github)
+                // Specify DevOps provider (azure or github)
                 case '--provider':
                     options.provider = value;
                     i++;
                     break;
-                // 指定 Pull Request ID (必需)
+                // Specify Pull Request ID (required)
                 case '--pr':
                     options.prId = parseInt(value);
                     i++;
                     break;
-                // 指定 AI 提供者 (claude、openai、grok、google)
+                // Specify AI provider (claude, openai, grok, google)
                 case '--ai':
                     options.aiProvider = this.normalizeProvider(value);
                     i++;
                     break;
-                // 指定 AI 模型名稱
+                // Specify AI model name
                 case '--model':
                     options.modelName = value;
                     i++;
                     break;
-                // 指定 AI API 金鑰
+                // Specify AI API key
                 case '--key':
                     options.modelKey = value;
                     i++;
                     break;
-                // 指定 Azure DevOps 組織 URL
+                // Specify Azure DevOps organization URL
                 case '--org':
                     options.organizationUrl = value;
                     i++;
                     break;
-                // 指定 Azure DevOps 專案名稱
+                // Specify Azure DevOps project name
                 case '--project':
                     options.projectName = value;
                     i++;
                     break;
-                // 指定 Azure DevOps 儲存庫 ID
+                // Specify Azure DevOps repository ID
                 case '--repo-id':
                     options.repositoryId = value;
                     i++;
                     break;
-                // 指定 Azure DevOps 個人存取權杖
+                // Specify Azure DevOps personal access token
                 case '--token':
                     options.accessToken = value;
                     i++;
                     break;
-                // 指定 GitHub 儲存庫所有者
+                // Specify GitHub repository owner
                 case '--owner':
                     options.owner = value;
                     i++;
                     break;
-                // 指定 GitHub 儲存庫名稱
+                // Specify GitHub repository name
                 case '--repo':
                     options.repo = value;
                     i++;
                     break;
-                // 啟用節流模式（僅送差異；false 則送整個檔案）
+                // Enable throttle mode (only send diffs; false sends entire files)
                 case '--throttle':
                     options.enableThrottleMode = value.toLowerCase() === 'true';
                     i++;
                     break;
-                // 啟用增量 Diff 模式（僅審查最新推送的變更）
+                // Enable incremental diff mode (only review latest push changes)
                 case '--incremental':
                     options.enableIncrementalDiff = value.toLowerCase() === 'true';
                     i++;
                     break;
-                // 啟用詳細日誌輸出
+                // Enable verbose logging output
                 case '--verbose':
                     options.showReviewContent = value.toLowerCase() === 'true';
                     i++;
                     break;
-                // 顯示幫助訊息
+                // Show help message
                 case '--help':
                     this.printHelp();
                     process.exit(0);
@@ -161,7 +161,7 @@ class PRReviewTester {
     }
 
     /**
-     * 標準化提供者名稱
+     * Normalize provider name
      */
     private static normalizeProvider(provider: string): string {
         const map: Record<string, string> = {
@@ -174,7 +174,7 @@ class PRReviewTester {
     }
 
     /**
-     * 從環境變數取得 API Key
+     * Get API Key from environment variable
      */
     private static getKeyFromEnv(provider: string): string {
         const keyMap: Record<string, string> = {
@@ -189,7 +189,7 @@ class PRReviewTester {
     }
 
     /**
-     * 打印幫助信息
+     * Print help information
      */
     private static printHelp(): void {
         console.log(`
@@ -197,35 +197,35 @@ class PRReviewTester {
 ║           AI PR AutoReview - Test/Verification Tool              ║
 ╚════════════════════════════════════════════════════════════════════╝
 
-用法:
-  npx ts-node DEVSCRIPTS/test-pr-review.ts [選項]
+Usage:
+  npx ts-node DEVSCRIPTS/test-pr-review.ts [options]
 
-必需參數:
-  --pr <ID>                 Pull Request ID (必需)
-  --provider <TYPE>         DevOps provider: 'azure' 或 'github'
-                           (預設: 'azure')
+Required Parameters:
+  --pr <ID>                 Pull Request ID (required)
+  --provider <TYPE>         DevOps provider: 'azure' or 'github'
+                           (default: 'azure')
 
-Azure DevOps 參數:
+Azure DevOps Parameters:
   --org <URL>              Organization URL
   --project <NAME>         Project name
   --repo-id <ID>           Repository ID
   --token <TOKEN>          Personal Access Token
 
-GitHub 參數:
+GitHub Parameters:
   --owner <USER>           Repository owner
   --repo <NAME>            Repository name
 
-AI 提供者參數:
+AI Provider Parameters:
   --ai <PROVIDER>          'claude', 'openai', 'grok', 'google'
-  --model <NAME>           Model name (如: claude-haiku-4-5)
-  --key <KEY>              API key (或使用環境變數)
+  --model <NAME>           Model name (e.g., claude-haiku-4-5)
+  --key <KEY>              API key (or use environment variable)
 
-功能開關:
-  --throttle <true|false>      啟用節流模式 (預設: true，僅送差異)
-  --incremental <true|false>  啟用增量 Diff (預設: false)
-  --verbose <true|false>     顯示詳細日誌 (預設: true)
+Feature Toggles:
+  --throttle <true|false>      Enable throttle mode (default: true, only send diffs)
+  --incremental <true|false>  Enable incremental diff (default: false)
+  --verbose <true|false>     Show verbose logs (default: true)
 
-例子:
+Examples:
   # Azure DevOps with Claude
   npx ts-node src/test-pr-review.ts \\
     --provider azure \\
@@ -246,30 +246,30 @@ AI 提供者參數:
     --model gpt-4 \\
     --key sk-...
 
-  # 啟用增量 Diff (最新推送變更)
+  # Enable incremental diff (latest push changes)
   npx ts-node src/test-pr-review.ts \\
     --pr 123 \\
     --incremental true
 
-  # 顯示幫助
+  # Show help
   npx ts-node src/test-pr-review.ts --help
 `);
     }
 
     /**
-     * 執行測試
+     * Execute test
      */
     async run(): Promise<void> {
         console.log('╔════════════════════════════════════════════════════════════════════╗');
-        console.log('║         開始 PR 代碼審查測試                                        ║');
+        console.log('║         Starting PR Code Review Test                              ║');
         console.log('╚════════════════════════════════════════════════════════════════════╝\n');
 
         try {
-            // 打印配置
+            // Print configuration
             this.printConfiguration();
 
-            // 初始化服務
-            console.log('\n🔧 初始化服務...');
+            // Initialize services
+            console.log('\n🔧 Initializing services...');
             const aiProvider = new AIProviderService();
             aiProvider.registerService(this.options.aiProvider, {
                 apiKey: this.options.modelKey,
@@ -286,8 +286,8 @@ AI 提供者參數:
 
             const devOpsService = devOpsProvider.getService(providerName);
 
-            // 構建 pipeline inputs
-            console.log('\n📋 準備 Pipeline 輸入...');
+            // Build pipeline inputs
+            console.log('\n📋 Preparing pipeline inputs...');
             const inputs = {
                 aiProvider: this.options.aiProvider,
                 modelName: this.options.modelName,
@@ -303,8 +303,8 @@ AI 提供者參數:
                 enableIncrementalDiff: this.options.enableIncrementalDiff
             };
 
-            // 取得 PR 變更
-            console.log('\n🔍 取得 PR 變更...');
+            // Get PR changes
+            console.log('\n🔍 Getting PR changes...');
             const repositoryId = this.options.provider === 'azure'
                 ? this.options.repositoryId!
                 : `${this.options.owner}/${this.options.repo}`;
@@ -320,27 +320,27 @@ AI 提供者參數:
             );
 
             if (!changes || changes.length === 0) {
-                console.log('⚠️ 沒有找到代碼變更');
+                console.log('⚠️ No code changes found');
                 return;
             }
 
-            console.log(`✅ 找到 ${changes.length} 個文件變更`);
+            console.log(`✅ Found ${changes.length} file changes`);
 
-            // 生成 AI 審查
-            console.log('\n🤖 生成 AI 審查...');
+            // Generate AI review
+            console.log('\n🤖 Generating AI review...');
             const reviewContent = await (this.main as any).generateAIReview(aiProvider, inputs, changes);
 
-            // 打印結果
+            // Print results
             console.log('\n' + '='.repeat(80));
-            console.log('📄 審查結果');
+            console.log('📄 Review Results');
             console.log('='.repeat(80));
             console.log(reviewContent);
             console.log('='.repeat(80));
 
-            console.log('\n✅ 測試完成！');
+            console.log('\n✅ Test completed!');
 
         } catch (error: any) {
-            console.error('\n❌ 錯誤:', error.message);
+            console.error('\n❌ Error:', error.message);
             if (error.stack) {
                 console.error(error.stack);
             }
@@ -349,10 +349,10 @@ AI 提供者參數:
     }
 
     /**
-     * 打印配置信息
+     * Print configuration information
      */
     private printConfiguration(): void {
-        console.log('⚙️  測試配置:');
+        console.log('⚙️  Test Configuration:');
         console.log(`  • Provider: ${this.options.provider.toUpperCase()}`);
         console.log(`  • PR ID: ${this.options.prId}`);
         console.log(`  • AI Provider: ${this.options.aiProvider}`);
@@ -363,7 +363,7 @@ AI 提供者參數:
     }
 }
 
-// 主程序
+// Main program
 async function main() {
     const args = process.argv.slice(2);
     const options = PRReviewTester.parseArgs(args);

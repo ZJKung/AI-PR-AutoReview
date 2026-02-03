@@ -1,14 +1,14 @@
 import { AIProviderService } from '../src/services/ai-provider.service';
 
 async function run() {
-    // 根據環境變數的 AiProvider 選擇要測試的 AI 平台
+    // Select AI platform to test based on environment variable AiProvider
     const requested = (process.env.AiProvider ?? 'Google').trim();
     const providerKey = requested.toLowerCase();
     const showReviewContent: boolean = (process.env.ShowReviewContent ?? 'false').toLowerCase() === 'true';
 
     const aiProvider = new AIProviderService();
-    const systemInstruction = `你是一位資深軟體工程師，請協助進行程式碼審查和分析。`;
-    const prompt = `請先確認你會使用 C# 語言嗎?`;
+    const systemInstruction = `You are a senior software engineer. Please help with code review and analysis.`;
+    const prompt = `Can you confirm that you can use C# language?`;
 
     try {
         let registerConfig: { apiKey: string; modelName: string } | undefined;

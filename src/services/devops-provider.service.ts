@@ -3,15 +3,15 @@ import { AzureDevOpsService } from './azure-devops.service';
 import { GitHubDevOpsService } from './github-devops.service';
 
 /**
- * DevOps 服務提供者類別
- * 統一管理所有 DevOps 服務的建立和存取
+ * DevOps Service Provider Class
+ * Centrally manages the creation and access of all DevOps services
  */
 export class DevOpsProviderService {
     private services: Map<string, DevOpsService>;
     private configs: Map<string, DevOpsServiceConfig>;
 
     /**
-     * 建立 DevOps 服務提供者實例
+     * Create DevOps Service Provider instance
      */
     constructor() {
         this.services = new Map();
@@ -19,10 +19,10 @@ export class DevOpsProviderService {
     }
 
     /**
-     * 註冊 DevOps 服務設定
-     * @param provider - DevOps 服務提供者名稱（azure 或 github）
-     * @param config - DevOps 服務設定
-     * @throws {Error} 當設定無效時拋出錯誤
+     * Register DevOps service configuration
+     * @param provider - DevOps service provider name (azure or github)
+     * @param config - DevOps service configuration
+     * @throws {Error} Throws error when configuration is invalid
      */
     public registerService(provider: string, config: DevOpsServiceConfig): void {
         if (!config.accessToken || config.accessToken.trim() === '') {
@@ -33,26 +33,26 @@ export class DevOpsProviderService {
     }
 
     /**
-     * 取得 DevOps 服務實例
-     * @param provider - DevOps 服務提供者名稱（azure 或 github）
-     * @returns DevOps 服務實例
-     * @throws {Error} 當提供者不支援或未註冊時拋出錯誤
+     * Get DevOps service instance
+     * @param provider - DevOps service provider name (azure or github)
+     * @returns DevOps service instance
+     * @throws {Error} Throws error when provider is unsupported or not registered
      */
     public getService(provider: string): DevOpsService {
         const normalizedProvider = provider.toLowerCase();
 
-        // 檢查是否已有實例
+        // Check if instance already exists
         if (this.services.has(normalizedProvider)) {
             return this.services.get(normalizedProvider)!;
         }
 
-        // 檢查是否有設定
+        // Check if configuration exists
         const config = this.configs.get(normalizedProvider);
         if (!config) {
             throw new Error(`⛔ Service ${provider} is not registered`);
         }
 
-        // 建立新實例
+        // Create new instance
         let service: DevOpsService;
         switch (normalizedProvider) {
             case 'azure':
@@ -66,20 +66,20 @@ export class DevOpsProviderService {
                 throw new Error(`⛔ Unsupported DevOps provider: ${provider}`);
         }
 
-        // 快取實例
+        // Cache instance
         this.services.set(normalizedProvider, service);
         return service;
     }
 
     /**
-     * 自動偵測提供者類型
-     * @param organizationUrl - 組織 URL
-     * @returns 提供者名稱（azure 或 github）
+     * Auto-detect provider type
+     * @param organizationUrl - Organization URL
+     * @returns Provider name (azure or github)
      */
     public static detectProvider(organizationUrl?: string): 'azure' | 'github' {
         console.log(`🚩 Detecting provider from organizationUrl: ${organizationUrl}`);
         if (!organizationUrl) {
-            return 'azure'; // 預設為 Azure
+            return 'azure'; // Default to Azure
         }
 
         const url = organizationUrl.toLowerCase();
@@ -91,17 +91,17 @@ export class DevOpsProviderService {
     }
 
     /**
-     * 檢查服務是否已註冊
-     * @param provider - DevOps 服務提供者名稱
-     * @returns 是否已註冊
+     * Check if service is registered
+     * @param provider - DevOps service provider name
+     * @returns Whether service is registered
      */
     public hasService(provider: string): boolean {
         return this.configs.has(provider.toLowerCase());
     }
 
     /**
-     * 移除服務註冊
-     * @param provider - DevOps 服務提供者名稱
+     * Remove service registration
+     * @param provider - DevOps service provider name
      */
     public removeService(provider: string): void {
         const normalizedProvider = provider.toLowerCase();

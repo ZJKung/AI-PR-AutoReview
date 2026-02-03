@@ -3,23 +3,23 @@ import { GenerateConfig } from '../interfaces/ai-service.interface';
 import { BaseHttpAIService } from './base-http-ai.service';
 
 /**
- * Google AI 服務實作
- * 使用 Google Gemini API 生成內容
+ * Google AI Service Implementation
+ * Uses Google Gemini API to generate content
  */
 export class GoogleAIService extends BaseHttpAIService {
     /**
-     * 建立 Google AI 服務實例
-     * @param apiKey - Google AI API 金鑰
-     * @param model - 模型名稱，預設為 'gemini-2.5-flash'
-     * @throws {Error} 當 apiKey 未提供時拋出錯誤
+     * Create Google AI service instance
+     * @param apiKey - Google AI API key
+     * @param model - Model name, defaults to 'gemini-2.5-flash'
+     * @throws {Error} Throws error when apiKey is not provided
      */
     constructor(apiKey: string, model: string = 'gemini-2.5-flash') {
         super(apiKey, model);
     }
 
     /**
-     * 取得服務名稱
-     * @returns 服務名稱
+     * Get service name
+     * @returns Service name
      */
     protected getServiceName(): string {
         return 'Google AI';
@@ -40,7 +40,7 @@ export class GoogleAIService extends BaseHttpAIService {
         prompt: string,
         config?: GenerateConfig
     ): any {
-        // 準備請求內容
+        // Prepare request content
         const requestBody: any = {
             contents: [
                 { role: 'user', parts: [{ text: prompt }] }
@@ -55,7 +55,7 @@ export class GoogleAIService extends BaseHttpAIService {
 
         if (!config) return requestBody;
 
-        // 若有提供設定，則加入生成設定
+        // If configuration is provided, add generation settings
         requestBody.generationConfig = {};
         if (config.temperature !== undefined)
             requestBody.generationConfig.temperature = config.temperature;
@@ -70,8 +70,8 @@ export class GoogleAIService extends BaseHttpAIService {
     }
 
     /**
-     * 提取 Google Gemini API 回應中的 Token 使用情況
-     * @param response - API 回應物件
+     * Extract token usage from Google Gemini API response
+     * @param response - API response object
      * @returns { inputTokens, outputTokens }
      */
     protected extractTokenUsage(response: any): { inputTokens?: number; outputTokens?: number } {

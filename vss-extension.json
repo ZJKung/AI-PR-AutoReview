@@ -1,11 +1,10 @@
 {
     "manifestVersion": 1,
-    "id": "ai-pr-autoreview",
+    "id": "PH-AI-Reviewer",
     "name": "AI PR AutoReview",
     "version": "1.3.4",
-    "publisher": "LawrenceShen",
+    "publisher": "AI-Reviewer",
     "description": "Generates a code review for a pull request using AI, support Gemini, OpenAI, Grok, Claude.",
-    "public": true,
     "targets": [
         {
             "id": "Microsoft.VisualStudio.Services"

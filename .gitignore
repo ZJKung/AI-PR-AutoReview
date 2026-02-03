@@ -3,3 +3,4 @@ dist-dev
 packages
 node_modules
 *.vsix
+.env

@@ -1,10 +1,10 @@
-# 工作項目：啟用系統提示詞檔案支援
+# Tasks: Enable System Prompt File Support
 
-- [x] 更新 `src/task.json` 以新增 `inputSystemInstructionSource` 和 `inputSystemPromptFile` @[src/task.json]
-- [x] 更新 `src/index.ts` (或相關服務) 以處理從檔案讀取系統提示詞的邏輯 @[src/index.ts]
-- [x] 建立單元測試 `test/systemPrompt.spec.ts` 驗證邏輯
-- [x] 驗證建置通過 `npm run build`
-- [x] 執行單元測試 `npm test`
-- [x] 更新 `README.md` 新增設定選項說明 @[README.md]
-- [x] 更新 `README.zh-TW.md` 新增設定選項說明 @[README.zh-TW.md]
-- [x] 更新 `README-Dev.md` 說明如何執行單元測試 @[README-Dev.md]
+- [x] Update `src/task.json` to add `inputSystemInstructionSource` and `inputSystemPromptFile` @[src/task.json]
+- [x] Update `src/index.ts` (or related service) to handle logic for reading system prompts from files @[src/index.ts]
+- [x] Create unit test `test/systemPrompt.spec.ts` to verify logic
+- [x] Verify build passes `npm run build`
+- [x] Run unit tests `npm test`
+- [x] Update `README.md` to add configuration option description @[README.md]
+- [x] Update `README.zh-TW.md` to add configuration option description @[README.zh-TW.md]
+- [x] Update `README-Dev.md` to explain how to run unit tests @[README-Dev.md]

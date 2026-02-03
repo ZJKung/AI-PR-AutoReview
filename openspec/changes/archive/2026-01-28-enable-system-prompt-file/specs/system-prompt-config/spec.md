@@ -1,29 +1,29 @@
 ## ADDED Requirements
 
-### Requirement: System Prompt Configuration (系統提示詞設定)
-本系統 **MUST** (必須) 允許使用者設定系統提示詞 (System Prompt) 的來源，可選擇直接輸入 (Inline) 或從儲存庫中的檔案讀取。
+### Requirement: System Prompt Configuration
+The system **MUST** allow users to configure the System Prompt source, with options to input directly (Inline) or read from a file in the repository.
 
-#### Scenario: User selects File source (使用者選擇檔案來源)
-- **WHEN** `inputSystemInstructionSource` 設定為 "File"
-- **AND** `inputSystemPromptFile` 指向一個有效的檔案
-- **THEN**系統應使用該檔案的內容作為系統提示詞 (System Instruction)
-- **AND** 忽略 `inputSystemInstruction` (行內) 的值
+#### Scenario: User selects File source
+- **WHEN** `inputSystemInstructionSource` is set to "File"
+- **AND** `inputSystemPromptFile` points to a valid file
+- **THEN** the system should use the file's content as the System Instruction
+- **AND** ignore the `inputSystemInstruction` (inline) value
 
-#### Scenario: User selects Inline source (使用者選擇行內來源)
-- **WHEN** `inputSystemInstructionSource` 設定為 "Inline"
-- **THEN** 系統應使用 `inputSystemInstruction` 的內容
-- **AND** 忽略 `inputSystemPromptFile`
+#### Scenario: User selects Inline source
+- **WHEN** `inputSystemInstructionSource` is set to "Inline"
+- **THEN** the system should use the `inputSystemInstruction` content
+- **AND** ignore `inputSystemPromptFile`
 
-#### Scenario: Invalid file handling (無效檔案處理)
-- **WHEN** `inputSystemInstructionSource` 為 "File"
-- **AND** `inputSystemPromptFile` 無效或為空
-- **THEN** 任務應失敗並顯示錯誤訊息
+#### Scenario: Invalid file handling
+- **WHEN** `inputSystemInstructionSource` is "File"
+- **AND** `inputSystemPromptFile` is invalid or empty
+- **THEN** the task should fail and display an error message
 
-#### Scenario: Input visibility (輸入項可見性)
-- **WHEN** `inputSystemInstructionSource` 為 "File"
-- **THEN** 顯示 `inputSystemPromptFile` 輸入項
-- **WHEN** `inputSystemInstructionSource` 為 "Inline"
-- **THEN** 顯示 `inputSystemInstruction` 輸入項
+#### Scenario: Input visibility
+- **WHEN** `inputSystemInstructionSource` is "File"
+- **THEN** display the `inputSystemPromptFile` input field
+- **WHEN** `inputSystemInstructionSource` is "Inline"
+- **THEN** display the `inputSystemInstruction` input field
 
 
 

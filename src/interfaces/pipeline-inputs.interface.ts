@@ -1,46 +1,46 @@
 /**
- * Azure DevOps Pipeline 輸入參數介面
+ * Azure DevOps pipeline input parameters interface
  */
 export interface PipelineInputs {
-    /** AI 提供者名稱 */
+    /** AI provider name */
     aiProvider: string;
-    /** AI 模型名稱 */
+    /** AI model name */
     modelName: string;
-    /** AI 模型 API 金鑰 */
+    /** AI model API key */
     modelKey: string;
-    /** Server 位址 (選用，用於 GitHub Copilot) */
+    /** Server address (optional, for GitHub Copilot) */
     serverAddress?: string;
-    /** 請求超時時間 (選用，用於 GitHub Copilot，單位：毫秒) */
+    /** Request timeout (optional, for GitHub Copilot, in milliseconds) */
     timeout?: number;
-    /** 系統指令 */
+    /** System instruction */
     systemInstruction: string;
-    /** 提示詞範本 */
+    /** Prompt template */
     promptTemplate: string;
-    /** 最大輸出 token 數 */
+    /** Max output tokens */
     maxOutputTokens: number;
-    /** 溫度值 (隨機性) */
+    /** Temperature (randomness) */
     temperature: number;
-    /** 要包含的檔案副檔名列表 */
+    /** File extensions to include */
     fileExtensions: string[];
-    /** 要排除的二進位檔案副檔名列表 */
+    /** Binary file extensions to exclude */
     binaryExtensions: string[];
-    /** 啟用 AI 節流模式（預設 true，僅送差異；false 則送整個檔案） */
+    /** Enable AI throttle mode (default true: diff only; false: full file) */
     enableThrottleMode: boolean;
-    /** 顯示審核內容（預設 false，不顯示；true 則 print 出送給 AI 以及回應的內容） */
+    /** Show review content (default false; true prints request and response) */
     showReviewContent: boolean;
-    /** 啟用增量 Diff 模式（預設 false，檢查所有 PR 變更；true 則僅檢查最後一次推送的變更） */
+    /** Enable incremental diff mode (default false: all PR changes; true: latest push only) */
     enableIncrementalDiff: boolean;
 }
 
 /**
- * Azure DevOps 連線資訊介面
+ * Azure DevOps connection info interface
  */
 export interface DevOpsConnection {
-    /** 存取權杖 */
+    /** Access token */
     accessToken: string;
-    /** 組織 URL */
+    /** Organization URL */
     collectionUri: string;
-    /** 專案名稱 */
+    /** Project name */
     projectName: string;
     /** Repository ID */
     repositoryId: string;

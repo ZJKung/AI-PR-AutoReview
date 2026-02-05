@@ -29,19 +29,19 @@ export class Main {
     }
 
     /**
-     * 從檔案載入系統指令
-     * @param filePath - 檔案路徑
-     * @param fallbackInstruction - 當檔案讀取失敗時的備用指令
-     * @returns 系統指令內容
+     * Load system instruction from a file
+     * @param filePath - File path
+     * @param fallbackInstruction - Fallback instruction when file read fails
+     * @returns System instruction content
      */
     private loadSystemInstructionFromFile(filePath: string, fallbackInstruction: string): string {
-        // 驗證副檔名
+        // Validate file extension
         const ext = path.extname(filePath).toLowerCase();
         if (!ALLOWED_FILE_EXTENSIONS.includes(ext)) {
             console.warn(`⚠️ Warning: System prompt file extension '${ext}' is not strictly supported. Recommended: .md, .txt`);
         }
 
-        // 嘗試讀取檔案
+        // Attempt to read file
         if (!fs.existsSync(filePath)) {
             console.warn(`⚠️ System prompt file not found: ${filePath}. Fallback to inline instruction.`);
             return fallbackInstruction;
@@ -62,11 +62,11 @@ export class Main {
     }
 
     /**
-     * 取得系統指令（支援 inline 或 file 來源）
-     * @param source - 來源類型 ('Inline' 或 'File')
-     * @param filePath - 檔案路徑（當 source 為 'File' 時使用）
-     * @param inlineInstruction - inline 指令內容
-     * @returns 最終的系統指令
+     * Get system instruction (inline or file source)
+     * @param source - Source type ('Inline' or 'File')
+     * @param filePath - File path (used when source is 'File')
+     * @param inlineInstruction - Inline instruction content
+     * @returns Final system instruction
      */
     private getSystemInstruction(source: string, filePath: string, inlineInstruction: string): string {
         let instruction = '';
@@ -82,7 +82,7 @@ export class Main {
             instruction = inlineInstruction;
         }
 
-        // 最終檢查：如果仍然為空，使用預設指令
+        // Final check: use default instruction if still empty
         if (!instruction || instruction.trim().length === 0) {
             console.warn(`⚠️ System prompt (inline or file fallback) is empty. Using default instruction.`);
             return DEFAULT_SYSTEM_INSTRUCTION;
@@ -92,12 +92,12 @@ export class Main {
     }
 
     /**
-     * 從環境變數或 task input 取得輸入值
-     * @param envKey - 環境變數的 key
-     * @param taskInputKey - task input 的 key
-     * @param required - 是否必填
-     * @param defaultValue - 預設值
-     * @returns 輸入值
+     * Get input value from env var or task input
+     * @param envKey - Environment variable key
+     * @param taskInputKey - Task input key
+     * @param required - Required flag
+     * @param defaultValue - Default value
+     * @returns Input value
      */
     private getInputValue(envKey: string, taskInputKey: string, required: boolean = false, defaultValue: string = ''): string {
         if (this.isDebugMode) {
@@ -108,8 +108,8 @@ export class Main {
     }
 
     /**
-     * 取得 AI Provider 的模型名稱和 API Key
-     * @param provider - AI Provider 名稱
+     * Get AI provider model name and API key
+     * @param provider - AI provider name
      * @returns { modelName, modelKey, serverAddress }
      */
     private getAIProviderConfig(provider: string): { modelName: string; modelKey: string; serverAddress?: string } {
@@ -142,7 +142,7 @@ export class Main {
             'grok': 'GrokAPIKey',
             'claude': 'ClaudeAPIKey',
             'google': 'GeminiAPIKey',
-            'githubcopilot': '' // GitHub Copilot 不需要 API Key
+            'githubcopilot': '' // GitHub Copilot does not require an API key
         };
         return process.env[keyMap[provider]] ?? '';
     }
@@ -166,7 +166,7 @@ export class Main {
             modelKey: config.apiKeyKey ? (tl.getInput(config.apiKeyKey, true) ?? '') : ''
         };
 
-        // GitHub Copilot 需要讀取 serverAddress
+        // GitHub Copilot needs serverAddress
         if (config.serverAddressKey) {
             result.serverAddress = tl.getInput(config.serverAddressKey, true) ?? '';
         }
@@ -175,23 +175,23 @@ export class Main {
     }
 
     /**
-     * 取得 Pipeline 的輸入參數
-     * @returns Pipeline 輸入參數
+     * Get pipeline inputs
+     * @returns Pipeline inputs
      */
     getPipelineInputs(): PipelineInputs {
-        // 取得 AI Provider
+        // Get AI provider
         const inputAiProvider = this.getInputValue('AiProvider', 'inputAiProvider', true, 'Google');
 
-        // 取得 AI Provider 設定
+        // Get AI provider config
         const { modelName, modelKey, serverAddress } = this.getAIProviderConfig(inputAiProvider);
 
-        // 取得系統指令
+        // Get system instruction
         const systemInstructionSource = this.getInputValue('SystemInstructionSource', 'inputSystemInstructionSource', false, 'Inline');
         const systemPromptFile = this.getInputValue('SystemPromptFile', 'inputSystemPromptFile', false, '');
         const inlineInstruction = this.getInputValue('SystemInstruction', 'inputSystemInstruction', false, '');
         const systemInstruction = this.getSystemInstruction(systemInstructionSource, systemPromptFile, inlineInstruction);
 
-        // 取得其他參數
+        // Get other parameters
         const promptTemplate = this.getInputValue('PromptTemplate', 'inputPromptTemplate', true, '{code_changes}');
         const maxOutputTokens = parseInt(this.getInputValue('MaxOutputTokens', 'inputMaxOutputTokens', false, '4096'));
         const temperature = parseFloat(this.getInputValue('Temperature', 'inputTemperature', false, '1.0'));
@@ -200,8 +200,8 @@ export class Main {
         const enableThrottleMode = this.getInputValue('EnableThrottleMode', 'inputEnableThrottleMode', false, 'true').toLowerCase() === 'true';
         const showReviewContent = this.getInputValue('ShowReviewContent', 'inputShowReviewContent', false, 'false').toLowerCase() === 'true';
         const enableIncrementalDiff = this.getInputValue('EnableIncrementalDiff', 'inputEnableIncrementalDiff', false, 'false').toLowerCase() === 'true';
-        
-        // 取得 GitHub Copilot Timeout (僅當 AI Provider 為 GitHubCopilot 時)
+
+        // Get GitHub Copilot timeout (only when provider is GitHubCopilot)
         let timeout: number | undefined = undefined;
         if (inputAiProvider.toLowerCase() === 'githubcopilot') {
             const timeoutStr = this.getInputValue('GitHubCopilotTimeout', 'inputGitHubCopilotTimeout', false, '120000');
@@ -211,7 +211,7 @@ export class Main {
             }
         }
 
-        // 解析副檔名列表
+        // Parse extension lists
         const fileExtensions = fileExtensionsStr
             ? fileExtensionsStr.split(',').map(ext => ext.trim()).filter(ext => ext.length > 0)
             : [];
@@ -239,8 +239,8 @@ export class Main {
     }
 
     /**
-     * 取得 Azure DevOps 連線資訊
-     * @returns Azure DevOps 連線資訊
+     * Get Azure DevOps connection info
+     * @returns Azure DevOps connection info
      */
     getDevOpsConnection(): DevOpsConnection {
         let accessToken: string;
@@ -250,24 +250,24 @@ export class Main {
         let pullRequestId: number;
 
         if (this.isDebugMode) {
-            // Debug 模式：從環境變數讀取
+            // Debug mode: read from environment variables
             accessToken = process.env.DevOpsAccessToken ?? '';
             collectionUri = process.env.DevOpsOrgUrl ?? '';
             projectName = process.env.DevOpsProjectName ?? '';
             repositoryId = process.env.DevOpsRepositoryId ?? '';
             pullRequestId = parseInt(process.env.DevOpsPRId ?? '0');
         } else {
-            // Pipeline 模式：從 Azure DevOps 變數讀取
+            // Pipeline mode: read from Azure DevOps variables
             const repositoryUri = tl.getVariable('Build.Repository.Uri') ?? '';
 
-            // 根據 Repository URI 判斷是 GitHub 還是 Azure DevOps
+            // Determine GitHub vs Azure DevOps by repository URI
             const isGitHub = repositoryUri.toLowerCase().includes('github.com');
             if (isGitHub) {
-                // Github 模式下目前還不知道怎麼取得 Access Token，所以先手動在變數裡設定，並將 PR 權限的 PAT 加入到變數中
+                // GitHub mode: Access token must be provided via variables (PAT with PR permissions)
                 accessToken = tl.getVariable('AccessToken') ?? '';
                 collectionUri = this.extractGitHubBaseUrl(repositoryUri);
                 repositoryId = this.extractGitHubOwnerRepo(repositoryUri);
-                projectName = repositoryId.split('/')[0]; // 使用 owner 作為 project name
+                projectName = repositoryId.split('/')[0]; // Use owner as project name
                 pullRequestId = parseInt(tl.getVariable('System.PullRequest.PullRequestNumber') ?? '0');
             } else {
                 accessToken = tl.getEndpointAuthorizationParameter('SystemVssConnection', 'AccessToken', false) ?? '';
@@ -304,14 +304,14 @@ export class Main {
     }
 
     /**
-     * 從 GitHub Repository URI 提取 owner/repo 格式
-     * @param repositoryUri - GitHub Repository URI (例如: https://github.com/lawrence8358/AI-PR-AutoReview)
-     * @returns owner/repo 格式的字串 (例如: lawrence8358/AI-PR-AutoReview)
+     * Extract owner/repo from GitHub repository URI
+     * @param repositoryUri - GitHub Repository URI (e.g., https://github.com/lawrence8358/AI-PR-AutoReview)
+     * @returns owner/repo string (e.g., lawrence8358/AI-PR-AutoReview)
      */
     extractGitHubOwnerRepo(repositoryUri: string): string {
         try {
             const url = new URL(repositoryUri);
-            // 移除開頭的斜線並去除可能的 .git 後綴
+            // Remove leading slash and optional .git suffix
             const pathParts = url.pathname.replace(/^\//, '').replace(/\.git$/, '').split('/');
             if (pathParts.length >= 2) {
                 return `${pathParts[0]}/${pathParts[1]}`;
@@ -323,9 +323,9 @@ export class Main {
     }
 
     /**
-     * 從 GitHub Repository URI 提取基礎 URL
-     * @param repositoryUri - GitHub Repository URI (例如: https://github.com/lawrence8358/AI-PR-AutoReview)
-     * @returns GitHub 基礎 URL (例如: https://github.com/)
+     * Extract base URL from GitHub repository URI
+     * @param repositoryUri - GitHub Repository URI (e.g., https://github.com/lawrence8358/AI-PR-AutoReview)
+     * @returns GitHub base URL (e.g., https://github.com/)
      */
     extractGitHubBaseUrl(repositoryUri: string): string {
         try {
@@ -338,11 +338,11 @@ export class Main {
     }
 
     /**
-     * 取得 PR 變更的檔案清單
-     * @param devOpsService - DevOps 服務實例
-     * @param connection - Azure DevOps 連線資訊
-     * @param inputs - Pipeline 輸入參數
-     * @returns PR 變更檔案清單
+     * Get list of PR changes
+     * @param devOpsService - DevOps service instance
+     * @param connection - Azure DevOps connection info
+     * @param inputs - Pipeline inputs
+     * @returns PR change list
      */
     async getPullRequestChanges(
         devOpsService: DevOpsService,
@@ -363,29 +363,29 @@ export class Main {
     }
 
     /**
-     * 呼叫 AI 服務取得建議內容
-     * @param aiProvider - AI Provider 服務實例
-     * @param inputs - Pipeline 輸入參數
-     * @param changes - PR 變更檔案清單
-     * @returns AI 分析結果，包含內容和 token 使用情況
+     * Call AI service to generate review content
+     * @param aiProvider - AI provider service instance
+     * @param inputs - Pipeline inputs
+     * @param changes - PR change list
+     * @returns AI analysis result, including content and token usage
      */
     async generateAIReview(
         aiProvider: AIProviderService,
         inputs: PipelineInputs,
         changes: Array<{ path: string; changeType: any; content: string }>
     ) {
-        // 取得 AI 服務
+        // Get AI service
         const aiService = aiProvider.getService(inputs.aiProvider);
 
-        // 組合變更內容
+        // Combine change content
         const codeChanges = changes
             .map(change => `\n## File: ${change.path}\n\`\`\`\n${change.content}\n\`\`\``)
             .join('\n');
 
-        // 替換提示詞範本中的佔位符
+        // Replace placeholder in prompt template
         const prompt = inputs.promptTemplate.replace('{code_changes}', codeChanges);
 
-        // 呼叫 AI 服務
+        // Call AI service
         const aiResponse = await aiService.generateComment(
             inputs.systemInstruction,
             prompt,
@@ -396,7 +396,7 @@ export class Main {
             }
         );
 
-        // 記錄總 token 使用情況
+        // Log total token usage
         if (aiResponse.inputTokens && aiResponse.outputTokens) {
             const totalTokens = aiResponse.inputTokens + aiResponse.outputTokens;
             console.log(`💰 Total Token Usage: ${totalTokens} (Input: ${aiResponse.inputTokens}, Output: ${aiResponse.outputTokens})`);
@@ -410,17 +410,17 @@ export class Main {
     }
 
     /**
-     * 將建議內容新增為 PR 的評論
-     * @param devOpsService - DevOps 服務實例
-     * @param connection - Azure DevOps 連線資訊
-     * @param reviewContent - AI 分析結果內容  
-     * @param providerName - AI 提供者名稱
-     * @param aiModelName - 使用的 AI 模型名稱
+     * Add review content as PR comment
+     * @param devOpsService - DevOps service instance
+     * @param connection - Azure DevOps connection info
+     * @param reviewContent - AI analysis content
+     * @param providerName - AI provider name
+     * @param aiModelName - AI model name
      */
     async addReviewComment(
         devOpsService: DevOpsService,
         connection: DevOpsConnection,
-        reviewContent: string,  
+        reviewContent: string,
         providerName: string,
         aiModelName: string
     ) {
@@ -436,37 +436,37 @@ export class Main {
 }
 
 /**
- * 執行 Azure DevOps Pipeline Task
+ * Execute Azure DevOps pipeline task
  */
 async function run() {
-    // 檢查是否為 debug 模式 (從環境變數或命令列參數)
+    // Check debug mode (env var or CLI arg)
     const isDebugMode = process.env.DEBUG_MODE === 'true' || process.argv.includes('--debug');
     const main = new Main(isDebugMode);
 
     try {
         console.log(`🚀 Starting AI Pull Request Code Review Task... (Debug Mode: ${isDebugMode ? 'ON' : 'OFF'})`);
 
-        // 1. 取得輸入參數
+        // 1. Get inputs
         const inputs = main.getPipelineInputs();
         const connection = main.getDevOpsConnection();
 
-        // 確認是否有 Pull Request 資訊
+        // Ensure PR info exists
         if (!connection.pullRequestId) {
             console.log('⚠️ Unable to get Pull Request information. Please ensure this task runs in a PR build.');
             tl.setResult(tl.TaskResult.Succeeded, 'No Pull Request context found. Task skipped.');
             return;
         }
 
-        // 2. 初始化服務
+        // 2. Initialize services
         const aiProvider = new AIProviderService();
         const config = {
             apiKey: inputs.modelKey,
             modelName: inputs.modelName,
             serverAddress: inputs.serverAddress,
             timeout: inputs.timeout
-        }; 
+        };
         aiProvider.registerService(inputs.aiProvider, config);
-        
+
         const devOpsProvider = new DevOpsProviderService();
         const provider = DevOpsProviderService.detectProvider(connection.collectionUri);
         devOpsProvider.registerService(provider, {
@@ -475,7 +475,7 @@ async function run() {
         });
         const devOpsService = devOpsProvider.getService(provider);
 
-        // 3. 取得 PR 變更
+        // 3. Get PR changes
         const changes = await main.getPullRequestChanges(devOpsService, connection, inputs);
         if (!changes || changes.length === 0) {
             console.log('⚠️ No code changes to review. Task completed.');
@@ -483,15 +483,15 @@ async function run() {
             return;
         }
 
-        // 4. 生成 AI 分析
+        // 4. Generate AI analysis
         const reviewResult = await main.generateAIReview(aiProvider, inputs, changes);
 
-        // 5. 新增評論
+        // 5. Add comment
         await main.addReviewComment(
-            devOpsService, 
-            connection, 
-            reviewResult.content, 
-            inputs.aiProvider,     
+            devOpsService,
+            connection,
+            reviewResult.content,
+            inputs.aiProvider,
             inputs.modelName
         );
         console.log('🎉 AI Pull Request Code Review completed successfully!');

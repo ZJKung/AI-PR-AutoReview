@@ -30,7 +30,7 @@ export class AIProviderService {
     public registerService(provider: string, config: AIServiceConfig): void {
         const providerLower = provider.toLowerCase();
 
-        // GitHub Copilot 不需要 apiKey，serverAddress 也是可選的（未提供時使用本機 CLI）
+        // GitHub Copilot does not require an apiKey; serverAddress is optional (defaults to local CLI)
         if (providerLower !== 'githubcopilot') {
             if (!config.apiKey || config.apiKey.trim() === '') {
                 throw new Error('⛔ API key is required');
@@ -79,7 +79,7 @@ export class AIProviderService {
                 service = new ClaudeService(config.apiKey, config.modelName);
                 break;
             case 'githubcopilot':
-                // serverAddress 和 timeout 是可選的，未提供時使用本機 CLI 和預設超時
+                // serverAddress and timeout are optional; defaults to local CLI and default timeout
                 service = new GithubCopilotService(config.serverAddress, config.modelName, config.timeout);
                 break;
             default:

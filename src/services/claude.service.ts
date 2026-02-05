@@ -3,25 +3,25 @@ import { GenerateConfig } from '../interfaces/ai-service.interface';
 import { BaseHttpAIService } from './base-http-ai.service';
 
 /**
- * Claude AI 服務實作
- * 使用 Anthropic API 生成內容
+ * Claude AI service implementation
+ * Uses Anthropic API to generate content
  */
 export class ClaudeService extends BaseHttpAIService {
     private readonly apiVersion = '2023-06-01';
 
     /**
-     * 建立 Claude AI 服務實例
-     * @param apiKey - Anthropic API 金鑰
-     * @param model - 模型名稱，預設為 'claude-haiku-4-5'
-     * @throws {Error} 當 apiKey 未提供時拋出錯誤
+     * Create Claude AI service instance
+     * @param apiKey - Anthropic API key
+     * @param model - Model name, defaults to 'claude-haiku-4-5'
+     * @throws {Error} Throws error when apiKey is not provided
      */
     constructor(apiKey: string, model: string = 'claude-haiku-4-5') {
         super(apiKey, model);
     }
 
     /**
-     * 取得服務名稱
-     * @returns 服務名稱
+     * Get service name
+     * @returns Service name
      */
     protected getServiceName(): string {
         return 'Claude (Anthropic)';
@@ -40,18 +40,18 @@ export class ClaudeService extends BaseHttpAIService {
     }
 
     /**
-     * 準備 Claude API 請求參數
-     * @param systemInstruction - 系統指令
-     * @param prompt - 提示詞
-     * @param config - 生成設定 (選用)
-     * @returns Claude API 請求參數
+     * Prepare Claude API request body
+     * @param systemInstruction - System instruction
+     * @param prompt - Prompt
+     * @param config - Generation config (optional)
+     * @returns Claude API request body
      */
     protected getRequestBody(
         systemInstruction: string,
         prompt: string,
         config?: GenerateConfig
     ): any {
-        // 準備請求內容
+        // Prepare request body
         const requestBody: any = {
             model: this.model,
             messages: [
@@ -76,8 +76,8 @@ export class ClaudeService extends BaseHttpAIService {
     }
 
     /**
-     * 提取 Claude API 回應中的 Token 使用情況
-     * @param response - API 回應物件
+     * Extract token usage from Claude API response
+     * @param response - API response object
      * @returns { inputTokens, outputTokens }
      */
     protected extractTokenUsage(response: any): { inputTokens?: number; outputTokens?: number } {

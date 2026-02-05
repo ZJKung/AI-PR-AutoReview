@@ -43,7 +43,6 @@ d:\Project\AiPrCodeReview
 ├── tsconfig.devscripts.json # devscripts compilation settings
 ├── vss-extension.json       # Azure DevOps extension manifest
 ├── README.md                # Project documentation (English version)
-├── README.zh-TW.md          # Project documentation (Traditional Chinese version)
 ├── README-Dev.md            # Developer documentation
 └── LICENSE.txt              # License terms
 ```
@@ -378,12 +377,12 @@ npm run packaging:install-tool
 3. Build and package:
 After completion, a new version VSIX file will be generated in the packages folder
 
-```powershell 
+```powershell
 npm run packaging:package
 ```
 
 4. Upload to marketplace:
-Log in to the MarketPlace publishing platform and upload the latest packaged VSIX file, as shown below ![MarketPlace Publishing Platform](screenshots/marketplace.png?raw=true) 
+Log in to the MarketPlace publishing platform and upload the latest packaged VSIX file, as shown below ![MarketPlace Publishing Platform](screenshots/marketplace.png?raw=true)
 
 
 Notes:

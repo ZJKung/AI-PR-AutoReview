@@ -6,5 +6,4 @@
 - [x] Verify build passes `npm run build`
 - [x] Run unit tests `npm test`
 - [x] Update `README.md` to add configuration option description @[README.md]
-- [x] Update `README.zh-TW.md` to add configuration option description @[README.zh-TW.md]
 - [x] Update `README-Dev.md` to explain how to run unit tests @[README-Dev.md]

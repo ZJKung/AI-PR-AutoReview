@@ -4,7 +4,7 @@ async function run() {
     // Initialize DevOps API
     const accessToken = process.env.DevOpsAccessToken;
     const organizationUrl = process.env.DevOpsOrgUrl;
-    
+
     const devOpsProvider = new DevOpsProviderService();
     const provider = DevOpsProviderService.detectProvider(organizationUrl);
     devOpsProvider.registerService(provider, {
@@ -30,7 +30,9 @@ async function run() {
         binaryExtensions,  // File types to exclude
         enableThrottleMode  // Throttle mode
     );
-
+    for (const c in changes) {
+        console.log(`Change ${c}: ${JSON.stringify(c)}`);
+    }
     if (!changes) {
         console.log('❌ No matching changed files found');
         return;

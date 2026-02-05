@@ -2,7 +2,12 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "rootDir": ".",
-    "outDir": "./dist-dev"
+    "outDir": "./dist-dev",
+    "sourceMap": true,
+    "inlineSources": true
   },
-  "include": ["src/**/*", "devscripts/**/*"]
+  "include": [
+    "src/**/*",
+    "devscripts/**/*"
+  ]
 }

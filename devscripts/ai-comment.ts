@@ -1,61 +1,44 @@
 import { AIProviderService } from '../src/services/ai-provider.service';
+import { AIProvider, AI_PROVIDERS } from '../src/interfaces/ai-service.interface';
 
 async function run() {
     // Select AI platform to test based on environment variable AiProvider
-    const requested = (process.env.AiProvider ?? 'Google').trim();
+    const requested = (process.env.AiProvider ?? 'google').trim();
     const providerKey = requested.toLowerCase();
     const showReviewContent: boolean = (process.env.ShowReviewContent ?? 'false').toLowerCase() === 'true';
+
+    // Validate provider
+    if (!(AI_PROVIDERS as readonly string[]).includes(providerKey)) {
+        throw new Error(`⛔ Unsupported AI Provider: ${requested}. Supported: ${AI_PROVIDERS.join(', ')}`);
+    }
+    const provider = providerKey as AIProvider;
 
     const aiProvider = new AIProviderService();
     const systemInstruction = `You are a senior software engineer. Please help with code review and analysis.`;
     const prompt = `Can you confirm that you can use C# language?`;
 
     try {
-        let registerConfig: { apiKey: string; modelName: string; serverAddress?: string } | undefined;
-        let canonicalName = 'Google';
+        // Resolve API key: unified env var first, then per-provider fallback
+        const apiKey = process.env.ApiKey
+            ?? process.env.OPENAI_API_KEY
+            ?? process.env.ANTHROPIC_API_KEY
+            ?? process.env.XAI_API_KEY
+            ?? process.env.GOOGLE_API_KEY
+            ?? '';
+        const modelName = process.env.ModelName || AIProviderService.getDefaultModel(provider);
+        const apiUrl = process.env.ApiUrl || undefined;
+        const serverAddress = provider === 'githubcopilot'
+            ? (process.env.GitHubCopilotServerAddress ?? '')
+            : undefined;
 
-        if (providerKey === 'openai') {
-            canonicalName = 'OpenAI';
-            registerConfig = {
-                apiKey: process.env.OpenAIAPIKey ?? '',
-                modelName: process.env.ModelName ?? 'gpt-4.1-nano'
-            };
-        } else if (providerKey === 'grok') {
-            canonicalName = 'Grok';
-            registerConfig = {
-                apiKey: process.env.GrokAPIKey ?? '',
-                modelName: process.env.ModelName ?? 'grok-3-mini'
-            };
-        } else if (providerKey === 'claude') {
-            canonicalName = 'Claude';
-            registerConfig = {
-                apiKey: process.env.ClaudeAPIKey ?? '',
-                modelName: process.env.ModelName ?? 'claude-haiku-4-5'
-            };
-        } else if (providerKey === 'google') {
-            canonicalName = 'Google';
-            registerConfig = {
-                apiKey: process.env.GeminiAPIKey ?? '',
-                modelName: process.env.ModelName ?? 'gemini-2.5-flash'
-            };
-        } else if (providerKey === 'githubcopilot') {
-            canonicalName = 'GitHubCopilot';
-            registerConfig = {
-                apiKey: '', // GitHub Copilot 不需要 API Key
-                modelName: process.env.ModelName ?? 'gpt-4o',
-                serverAddress: process.env.GitHubCopilotServerAddress ?? ''
-            };
-        } else {
-            throw new Error(`⛔ Unsupported AI Provider: ${requested}`);
-        }
-
-        aiProvider.registerService(canonicalName, {
-            apiKey: registerConfig.apiKey,
-            modelName: registerConfig.modelName,
-            serverAddress: registerConfig.serverAddress
+        aiProvider.registerService(provider, {
+            apiKey,
+            modelName,
+            apiUrl,
+            serverAddress
         });
 
-        const aiService = aiProvider.getService(canonicalName);
+        const aiService = aiProvider.getService(provider);
 
         const response = await aiService.generateComment(
             systemInstruction,

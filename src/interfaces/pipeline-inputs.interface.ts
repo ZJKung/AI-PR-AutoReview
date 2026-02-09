@@ -1,9 +1,11 @@
+import { AIProvider } from './ai-service.interface';
+
 /**
  * Azure DevOps pipeline input parameters interface
  */
 export interface PipelineInputs {
-    /** AI provider name (e.g. 'OpenAI', 'Google', 'Claude', 'Grok', 'GitHubCopilot', 'Custom') */
-    aiProvider: string;
+    /** AI provider */
+    aiProvider: AIProvider;
     /** AI model name */
     modelName: string;
     /** AI API key */

@@ -3,6 +3,7 @@ import * as tl from 'azure-pipelines-task-lib/task';
 import * as fs from 'fs';
 import * as path from 'path';
 import { PipelineInputs, DevOpsConnection } from './interfaces/pipeline-inputs.interface';
+import { AIProvider, AI_PROVIDERS } from './interfaces/ai-service.interface';
 import { AIProviderService } from './services/ai-provider.service';
 import { DevOpsProviderService } from './services/devops-provider.service';
 import { DevOpsService } from './interfaces/devops-service.interface';
@@ -108,25 +109,38 @@ export class Main {
     }
 
     /**
+     * Parse a raw string from task input into an AIProvider enum value
+     * @param raw - Raw provider string from task input (e.g. 'Google', 'OpenAI', 'GitHubCopilot')
+     * @returns AIProvider enum value
+     * @throws {Error} When the provider string is not recognized
+     */
+    private parseAIProvider(raw: string): AIProvider {
+        const key = raw.toLowerCase();
+        if ((AI_PROVIDERS as readonly string[]).includes(key)) {
+            return key as AIProvider;
+        }
+        throw new Error(`⛔ Unknown AI provider: "${raw}". Supported: ${AI_PROVIDERS.join(', ')}`);
+    }
+
+    /**
      * Get AI provider configuration (unified for all providers)
      * Uses the provider registry to resolve defaults for model and URL.
-     * @param provider - AI provider name
+     * @param provider - AI provider enum value
      * @returns { modelName, apiKey, apiUrl, serverAddress }
      */
-    private getAIProviderConfig(provider: string): {
+    private getAIProviderConfig(provider: AIProvider): {
         modelName: string;
         apiKey: string;
         apiUrl?: string;
         serverAddress?: string;
     } {
-        const providerLower = provider.toLowerCase();
-        const defaultModel = AIProviderService.getDefaultModel(providerLower);
+        const defaultModel = AIProviderService.getDefaultModel(provider);
 
         if (this.isDebugMode) {
             const modelName = process.env.ModelName || defaultModel;
             const apiKey = process.env.ApiKey ?? '';
             const apiUrl = process.env.ApiUrl ?? '';
-            const serverAddress = providerLower === 'githubcopilot'
+            const serverAddress = provider === 'githubcopilot'
                 ? process.env.GitHubCopilotServerAddress
                 : undefined;
             return { modelName, apiKey, apiUrl: apiUrl || undefined, serverAddress };
@@ -136,7 +150,7 @@ export class Main {
         const modelName = tl.getInput('inputModelName', false)?.trim() || defaultModel;
         const apiKey = tl.getInput('inputApiKey', false) ?? '';
         const apiUrl = tl.getInput('inputApiUrl', false)?.trim() || undefined;
-        const serverAddress = providerLower === 'githubcopilot'
+        const serverAddress = provider === 'githubcopilot'
             ? (tl.getInput('inputGitHubCopilotServerAddress', false) ?? '')
             : undefined;
 
@@ -149,7 +163,8 @@ export class Main {
      */
     getPipelineInputs(): PipelineInputs {
         // Get AI provider
-        const inputAiProvider = this.getInputValue('AiProvider', 'inputAiProvider', true, 'Google');
+        const inputAiProviderRaw = this.getInputValue('AiProvider', 'inputAiProvider', true, 'Google');
+        const inputAiProvider = this.parseAIProvider(inputAiProviderRaw);
 
         // Get AI provider config (unified — defaults resolved from registry)
         const { modelName, apiKey, apiUrl, serverAddress } = this.getAIProviderConfig(inputAiProvider);
@@ -172,7 +187,7 @@ export class Main {
 
         // Get GitHub Copilot timeout (only when provider is GitHubCopilot)
         let timeout: number | undefined = undefined;
-        if (inputAiProvider.toLowerCase() === 'githubcopilot') {
+        if (inputAiProvider === 'githubcopilot') {
             const timeoutStr = this.getInputValue('GitHubCopilotTimeout', 'inputGitHubCopilotTimeout', false, '120000');
             if (timeoutStr && timeoutStr.trim() !== '') {
                 const parsedTimeout = parseInt(timeoutStr);

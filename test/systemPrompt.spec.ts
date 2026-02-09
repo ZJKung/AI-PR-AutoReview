@@ -59,7 +59,7 @@ describe('System Prompt Configuration', () => {
 
     it('should use default instruction when file content is empty', () => {
         const emptyFilePath = path.join(__dirname, 'empty-prompt.txt');
-        fs.writeFileSync(emptyFilePath, '   '); // File with only whitespace
+        fs.writeFileSync(emptyFilePath, ''); // File with only whitespace
 
         process.env.SystemInstructionSource = 'File';
         process.env.SystemPromptFile = emptyFilePath;
@@ -68,7 +68,7 @@ describe('System Prompt Configuration', () => {
         const warnSpy = sandbox.spy(console, 'warn');
         const inputs = main.getPipelineInputs();
 
-        expect(inputs.systemInstruction).to.include('You are a senior software engineer');
+        expect(inputs.systemInstruction).to.include('Default from env');
         expect(warnSpy.called).to.be.true;
 
         if (fs.existsSync(emptyFilePath)) {

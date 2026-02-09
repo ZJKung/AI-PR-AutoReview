@@ -1,4 +1,4 @@
-import { AIService, AIServiceConfig, AIServiceFactory, AIProviderMetadata } from '../interfaces/ai-service.interface';
+import { AIService, AIServiceConfig, AIServiceFactory, AIProviderMetadata, AIProvider, AI_PROVIDERS } from '../interfaces/ai-service.interface';
 import { GoogleAIService } from './google-ai.service';
 import { OpenAIService } from './openai.service';
 import { GrokService } from './grok.service';
@@ -10,7 +10,7 @@ import { CustomAIService } from './custom-ai.service';
  * Built-in provider definitions.
  * To add a new provider, simply add an entry here — no switch/case needed.
  */
-const BUILT_IN_PROVIDERS: Record<string, AIProviderMetadata> = {
+const BUILT_IN_PROVIDERS: Record<AIProvider, AIProviderMetadata> = {
     google: {
         displayName: 'Google AI',
         defaultModel: 'gemini-2.5-flash',
@@ -105,12 +105,12 @@ export class AIProviderService {
 
     /**
      * Register (or override) a provider at runtime
-     * @param name - Lowercase provider key
+     * @param provider - AIProvider enum value or lowercase string key
      * @param metadata - Provider metadata including factory
      */
-    public static registerProvider(name: string, metadata: AIProviderMetadata): void {
+    public static registerProvider(provider: AIProvider | string, metadata: AIProviderMetadata): void {
         AIProviderService.ensureInitialized();
-        AIProviderService.registry.set(name.toLowerCase(), metadata);
+        AIProviderService.registry.set(provider.toLowerCase(), metadata);
     }
 
     /**
@@ -118,7 +118,7 @@ export class AIProviderService {
      * @param provider - Provider key
      * @returns AIProviderMetadata or undefined
      */
-    public static getProviderMetadata(provider: string): AIProviderMetadata | undefined {
+    public static getProviderMetadata(provider: AIProvider | string): AIProviderMetadata | undefined {
         AIProviderService.ensureInitialized();
         return AIProviderService.registry.get(provider.toLowerCase());
     }
@@ -136,7 +136,7 @@ export class AIProviderService {
      * @param provider - Provider key
      * @returns Default model name or empty string
      */
-    public static getDefaultModel(provider: string): string {
+    public static getDefaultModel(provider: AIProvider | string): string {
         return AIProviderService.getProviderMetadata(provider)?.defaultModel ?? '';
     }
 
@@ -145,7 +145,7 @@ export class AIProviderService {
      * @param provider - Provider key
      * @returns Default API URL or undefined
      */
-    public static getDefaultApiUrl(provider: string): string | undefined {
+    public static getDefaultApiUrl(provider: AIProvider | string): string | undefined {
         return AIProviderService.getProviderMetadata(provider)?.defaultApiUrl;
     }
 
@@ -157,11 +157,11 @@ export class AIProviderService {
      * Register (validate & store) a service configuration
      * Applies provider defaults for missing model name / API URL.
      *
-     * @param provider - Provider key (e.g. 'openai', 'custom')
+     * @param provider - AIProvider enum value or string key
      * @param config - Partial config; defaults are applied from registry
      * @throws {Error} When required fields are missing
      */
-    public registerService(provider: string, config: AIServiceConfig): void {
+    public registerService(provider: AIProvider | string, config: AIServiceConfig): void {
         const key = provider.toLowerCase();
         const meta = AIProviderService.registry.get(key);
         if (!meta) {
@@ -194,7 +194,7 @@ export class AIProviderService {
      * @param provider - Provider key
      * @returns AIService instance
      */
-    public getService(provider: string): AIService {
+    public getService(provider: AIProvider | string): AIService {
         const key = provider.toLowerCase();
 
         // Return cached instance
@@ -225,14 +225,14 @@ export class AIProviderService {
     /**
      * Check if a service is registered
      */
-    public hasService(provider: string): boolean {
+    public hasService(provider: AIProvider | string): boolean {
         return this.configs.has(provider.toLowerCase());
     }
 
     /**
      * Remove a service registration and cached instance
      */
-    public removeService(provider: string): void {
+    public removeService(provider: AIProvider | string): void {
         const key = provider.toLowerCase();
         this.configs.delete(key);
         this.services.delete(key);

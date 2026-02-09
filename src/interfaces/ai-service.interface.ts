@@ -1,4 +1,14 @@
 /**
+ * All supported AI provider keys
+ */
+export const AI_PROVIDERS = ['google', 'openai', 'grok', 'claude', 'githubcopilot', 'custom'] as const;
+
+/**
+ * Supported AI provider type
+ */
+export type AIProvider = typeof AI_PROVIDERS[number];
+
+/**
  * AI service response interface
  */
 export interface AIResponse {

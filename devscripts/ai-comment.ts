@@ -19,12 +19,7 @@ async function run() {
 
     try {
         // Resolve API key: unified env var first, then per-provider fallback
-        const apiKey = process.env.ApiKey
-            ?? process.env.OPENAI_API_KEY
-            ?? process.env.ANTHROPIC_API_KEY
-            ?? process.env.XAI_API_KEY
-            ?? process.env.GOOGLE_API_KEY
-            ?? '';
+        const apiKey = process.env.ApiKey ?? '';
         const modelName = process.env.ModelName || AIProviderService.getDefaultModel(provider);
         const apiUrl = process.env.ApiUrl || undefined;
         const serverAddress = provider === 'githubcopilot'

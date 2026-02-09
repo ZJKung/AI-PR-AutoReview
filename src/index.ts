@@ -108,70 +108,39 @@ export class Main {
     }
 
     /**
-     * Get AI provider model name and API key
+     * Get AI provider configuration (unified for all providers)
+     * Uses the provider registry to resolve defaults for model and URL.
      * @param provider - AI provider name
-     * @returns { modelName, modelKey, serverAddress }
+     * @returns { modelName, apiKey, apiUrl, serverAddress }
      */
-    private getAIProviderConfig(provider: string): { modelName: string; modelKey: string; serverAddress?: string } {
+    private getAIProviderConfig(provider: string): {
+        modelName: string;
+        apiKey: string;
+        apiUrl?: string;
+        serverAddress?: string;
+    } {
         const providerLower = provider.toLowerCase();
+        const defaultModel = AIProviderService.getDefaultModel(providerLower);
 
         if (this.isDebugMode) {
-            const modelName = process.env.ModelName ?? this.getDefaultModelName(providerLower);
-            const modelKey = this.getModelKeyFromEnv(providerLower);
-            const serverAddress = providerLower === 'githubcopilot' ? process.env.GitHubCopilotServerAddress : undefined;
-            return { modelName, modelKey, serverAddress };
-        } else {
-            return this.getModelConfigFromTaskInput(providerLower);
-        }
-    }
-
-    private getDefaultModelName(provider: string): string {
-        const defaults: Record<string, string> = {
-            'openai': 'gpt-4.1-nano',
-            'grok': 'grok-3-mini',
-            'claude': 'claude-haiku-4-5',
-            'google': 'gemini-2.5-flash',
-            'githubcopilot': 'gpt-5-mini'
-        };
-        return defaults[provider] ?? 'gemini-2.5-flash';
-    }
-
-    private getModelKeyFromEnv(provider: string): string {
-        const keyMap: Record<string, string> = {
-            'openai': 'OpenAIAPIKey',
-            'grok': 'GrokAPIKey',
-            'claude': 'ClaudeAPIKey',
-            'google': 'GeminiAPIKey',
-            'githubcopilot': '' // GitHub Copilot does not require an API key
-        };
-        return process.env[keyMap[provider]] ?? '';
-    }
-
-    private getModelConfigFromTaskInput(provider: string): { modelName: string; modelKey: string; serverAddress?: string } {
-        const configMap: Record<string, { nameKey: string; apiKeyKey: string; defaultName: string; serverAddressKey?: string }> = {
-            'openai': { nameKey: 'inputOpenAIModelName', apiKeyKey: 'inputOpenAIApiKey', defaultName: 'gpt-4.1-nano' },
-            'grok': { nameKey: 'inputGrokModelName', apiKeyKey: 'inputGrokApiKey', defaultName: 'grok-3-mini' },
-            'claude': { nameKey: 'inputClaudeModelName', apiKeyKey: 'inputClaudeApiKey', defaultName: 'claude-haiku-4-5' },
-            'google': { nameKey: 'inputModelName', apiKeyKey: 'inputModelKey', defaultName: 'gemini-2.5-flash' },
-            'githubcopilot': { nameKey: 'inputGitHubCopilotModelName', apiKeyKey: '', defaultName: 'gpt-4o', serverAddressKey: 'inputGitHubCopilotServerAddress' }
-        };
-
-        const config = configMap[provider];
-        if (!config) {
-            throw new Error(`⛔ Unsupported AI Provider: ${provider}`);
+            const modelName = process.env.ModelName || defaultModel;
+            const apiKey = process.env.ApiKey ?? '';
+            const apiUrl = process.env.ApiUrl ?? '';
+            const serverAddress = providerLower === 'githubcopilot'
+                ? process.env.GitHubCopilotServerAddress
+                : undefined;
+            return { modelName, apiKey, apiUrl: apiUrl || undefined, serverAddress };
         }
 
-        const result: { modelName: string; modelKey: string; serverAddress?: string } = {
-            modelName: tl.getInput(config.nameKey, false) ?? config.defaultName,
-            modelKey: config.apiKeyKey ? (tl.getInput(config.apiKeyKey, true) ?? '') : ''
-        };
+        // Pipeline mode: read from unified task inputs
+        const modelName = tl.getInput('inputModelName', false)?.trim() || defaultModel;
+        const apiKey = tl.getInput('inputApiKey', false) ?? '';
+        const apiUrl = tl.getInput('inputApiUrl', false)?.trim() || undefined;
+        const serverAddress = providerLower === 'githubcopilot'
+            ? (tl.getInput('inputGitHubCopilotServerAddress', false) ?? '')
+            : undefined;
 
-        // GitHub Copilot needs serverAddress
-        if (config.serverAddressKey) {
-            result.serverAddress = tl.getInput(config.serverAddressKey, true) ?? '';
-        }
-
-        return result;
+        return { modelName, apiKey, apiUrl, serverAddress };
     }
 
     /**
@@ -182,8 +151,8 @@ export class Main {
         // Get AI provider
         const inputAiProvider = this.getInputValue('AiProvider', 'inputAiProvider', true, 'Google');
 
-        // Get AI provider config
-        const { modelName, modelKey, serverAddress } = this.getAIProviderConfig(inputAiProvider);
+        // Get AI provider config (unified — defaults resolved from registry)
+        const { modelName, apiKey, apiUrl, serverAddress } = this.getAIProviderConfig(inputAiProvider);
 
         // Get system instruction
         const systemInstructionSource = this.getInputValue('SystemInstructionSource', 'inputSystemInstructionSource', false, 'Inline');
@@ -223,7 +192,8 @@ export class Main {
         return {
             aiProvider: inputAiProvider,
             modelName,
-            modelKey,
+            apiKey,
+            apiUrl,
             serverAddress,
             timeout,
             systemInstruction,
@@ -460,8 +430,9 @@ async function run() {
         // 2. Initialize services
         const aiProvider = new AIProviderService();
         const config = {
-            apiKey: inputs.modelKey,
+            apiKey: inputs.apiKey,
             modelName: inputs.modelName,
+            apiUrl: inputs.apiUrl,
             serverAddress: inputs.serverAddress,
             timeout: inputs.timeout
         };

@@ -21,9 +21,9 @@ interface TestOptions {
     prId: number;
     aiProvider: string;
     modelName: string;
-    modelKey: string;
+    apiKey: string;
     // For GitHub Copilot
-    serverAddress?: string; 
+    serverAddress?: string;
     timeout?: number;
     // For Azure DevOps
     organizationUrl?: string;
@@ -59,7 +59,7 @@ class PRReviewTester {
             showReviewContent: true,
             aiProvider: 'Claude',
             modelName: 'claude-haiku-4-5',
-            modelKey: ''
+            apiKey: ''
         };
 
         for (let i = 0; i < args.length; i++) {
@@ -89,7 +89,7 @@ class PRReviewTester {
                     break;
                 // 指定 AI API 金鑰
                 case '--key':
-                    options.modelKey = value;
+                    options.apiKey = value;
                     i++;
                     break;
                 // 指定 GitHub Copilot CLI Server 位址
@@ -166,11 +166,11 @@ class PRReviewTester {
             if (!options.serverAddress) {
                 options.serverAddress = process.env.GitHubCopilotServerAddress || '';
             }
-            options.modelKey = ''; // GitHub Copilot 不使用 API key
+            options.apiKey = ''; // GitHub Copilot 不使用 API key
         } else {
-            if (!options.modelKey) {
-                options.modelKey = this.getKeyFromEnv(options.aiProvider);
-                if (!options.modelKey) {
+            if (!options.apiKey) {
+                options.apiKey = this.getKeyFromEnv(options.aiProvider);
+                if (!options.apiKey) {
                     console.error(`❌ Error: API key is required for ${options.aiProvider}`);
                     console.log('   Provide via --key or environment variable');
                     process.exit(1);
@@ -297,7 +297,7 @@ AI 提供者參數:
             console.log('\n🔧 初始化服務...');
             const aiProvider = new AIProviderService();
             aiProvider.registerService(this.options.aiProvider, {
-                apiKey: this.options.modelKey,
+                apiKey: this.options.apiKey,
                 modelName: this.options.modelName,
                 serverAddress: this.options.serverAddress,
                 timeout: this.options.timeout
@@ -328,7 +328,7 @@ AI 提供者參數:
             const inputs = {
                 aiProvider: this.options.aiProvider,
                 modelName: this.options.modelName,
-                modelKey: this.options.modelKey,
+                apiKey: this.options.apiKey,
                 serverAddress: this.options.serverAddress,
                 timeout: this.options.timeout,
                 systemInstruction: systemInstruction,

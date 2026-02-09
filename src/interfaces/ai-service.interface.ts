@@ -23,7 +23,7 @@ export interface GenerateConfig {
 }
 
 /**
- * AI service base interface
+ * AI service base interface (Strategy interface)
  */
 export interface AIService {
     /**
@@ -37,17 +37,39 @@ export interface AIService {
 }
 
 /**
- * AI service provider config interface
+ * AI service configuration passed to factory functions
  */
 export interface AIServiceConfig {
     /** API key */
     apiKey: string;
     /** Model name */
     modelName: string;
-    /** API endpoint (optional) */
-    apiEndpoint?: string;
-    /** Server address (optional, for GitHub Copilot) */
+    /** API endpoint URL (optional; providers have defaults) */
+    apiUrl?: string;
+    /** Server address (optional, for GitHub Copilot CLI Server) */
     serverAddress?: string;
-    /** Request timeout (optional, for GitHub Copilot, in milliseconds) */
+    /** Request timeout in milliseconds (optional, for GitHub Copilot) */
     timeout?: number;
+}
+
+/**
+ * Factory function type for creating AI service instances
+ */
+export type AIServiceFactory = (config: AIServiceConfig) => AIService;
+
+/**
+ * Metadata for a registered AI provider
+ * Used by the provider registry for default values, validation, and factory creation
+ */
+export interface AIProviderMetadata {
+    /** Human-readable display name */
+    displayName: string;
+    /** Default model name when user doesn't specify one */
+    defaultModel: string;
+    /** Default API endpoint URL (undefined = SDK default) */
+    defaultApiUrl?: string;
+    /** Whether this provider requires an API key */
+    requiresApiKey: boolean;
+    /** Factory function to create the AIService instance */
+    factory: AIServiceFactory;
 }

@@ -2,15 +2,17 @@
  * Azure DevOps pipeline input parameters interface
  */
 export interface PipelineInputs {
-    /** AI provider name */
+    /** AI provider name (e.g. 'OpenAI', 'Google', 'Claude', 'Grok', 'GitHubCopilot', 'Custom') */
     aiProvider: string;
     /** AI model name */
     modelName: string;
-    /** AI model API key */
-    modelKey: string;
-    /** Server address (optional, for GitHub Copilot) */
+    /** AI API key */
+    apiKey: string;
+    /** AI API endpoint URL (optional; providers have sensible defaults) */
+    apiUrl?: string;
+    /** Server address (optional, for GitHub Copilot CLI Server) */
     serverAddress?: string;
-    /** Request timeout (optional, for GitHub Copilot, in milliseconds) */
+    /** Request timeout in milliseconds (optional, for GitHub Copilot) */
     timeout?: number;
     /** System instruction */
     systemInstruction: string;

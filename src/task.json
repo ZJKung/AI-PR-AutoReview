@@ -23,86 +23,41 @@
             "label": "AI Provider",
             "defaultValue": "Google",
             "required": true,
-            "helpMarkDown": "Select the AI provider to use for generating comments.",
+            "helpMarkDown": "Select the AI provider to use for generating comments. Choose 'Custom' to use any OpenAI-compatible endpoint.",
             "options": {
                 "Google": "Google Gemini",
                 "OpenAI": "OpenAI",
                 "Grok": "Grok (xAI)",
                 "Claude": "Claude (Anthropic)",
-                "GitHubCopilot": "GitHub Copilot (Preview)"
+                "GitHubCopilot": "GitHub Copilot (Preview)",
+                "Custom": "Custom (OpenAI Compatible)"
             }
+        },
+        {
+            "name": "inputApiKey",
+            "type": "string",
+            "label": "API Key",
+            "defaultValue": "",
+            "required": true,
+            "helpMarkDown": "Enter the API key for your selected AI provider.",
+            "visibleRule": "inputAiProvider != GitHubCopilot"
         },
         {
             "name": "inputModelName",
             "type": "string",
-            "label": "Gemini Model Name",
-            "defaultValue": "gemini-2.5-flash",
-            "required": true,
-            "helpMarkDown": "Enter the Gemini model name. (e.g. gemini-2.5-flash, gemini-2.5-pro)",
-            "visibleRule": "inputAiProvider == Google"
-        },
-        {
-            "name": "inputModelKey",
-            "type": "string",
-            "label": "Gemini API Key",
+            "label": "Model Name",
             "defaultValue": "",
-            "required": true,
-            "helpMarkDown": "Enter your API key for the selected AI provider.",
-            "visibleRule": "inputAiProvider == Google"
+            "required": false,
+            "helpMarkDown": "Enter the model name. Leave empty to use the provider default. Defaults: Google=gemini-2.5-flash, OpenAI=gpt-4.1-nano, Grok=grok-3-mini, Claude=claude-haiku-4-5, GitHub Copilot=gpt-4o."
         },
         {
-            "name": "inputOpenAIModelName",
+            "name": "inputApiUrl",
             "type": "string",
-            "label": "OpenAI Model Name",
-            "defaultValue": "gpt-4.1-nano",
-            "required": true,
-            "helpMarkDown": "Enter the OpenAI model name (e.g. gpt-5, gpt-5-mini, gpt-5-nano, gpt-4o, gpt-4o-mini).",
-            "visibleRule": "inputAiProvider == OpenAI"
-        },
-        {
-            "name": "inputOpenAIApiKey",
-            "type": "string",
-            "label": "OpenAI API Key",
+            "label": "API Endpoint URL",
             "defaultValue": "",
-            "required": true,
-            "helpMarkDown": "Enter your OpenAI API key.",
-            "visibleRule": "inputAiProvider == OpenAI"
-        },
-        {
-            "name": "inputGrokModelName",
-            "type": "string",
-            "label": "Grok Model Name",
-            "defaultValue": "grok-3-mini",
-            "required": true,
-            "helpMarkDown": "Enter the Grok model name (e.g. grok-3-mini, grok-4-fast-non-reasoning).",
-            "visibleRule": "inputAiProvider == Grok"
-        },
-        {
-            "name": "inputGrokApiKey",
-            "type": "string",
-            "label": "Grok (xAI) API Key",
-            "defaultValue": "",
-            "required": true,
-            "helpMarkDown": "Enter your Grok (xAI) API key.",
-            "visibleRule": "inputAiProvider == Grok"
-        },
-        {
-            "name": "inputClaudeModelName",
-            "type": "string",
-            "label": "Claude Model Name",
-            "defaultValue": "claude-haiku-4-5",
-            "required": true,
-            "helpMarkDown": "Enter the Claude model name (e.g. claude-haiku-4-5).",
-            "visibleRule": "inputAiProvider == Claude"
-        },
-        {
-            "name": "inputClaudeApiKey",
-            "type": "string",
-            "label": "Claude API Key",
-            "defaultValue": "",
-            "required": true,
-            "helpMarkDown": "Enter your Claude (Anthropic) API key.",
-            "visibleRule": "inputAiProvider == Claude"
+            "required": false,
+            "helpMarkDown": "Custom API endpoint URL. Required for 'Custom' provider. Optional for others (overrides the default endpoint). Supports OpenAI-compatible APIs such as Azure OpenAI, Ollama, LM Studio, etc.",
+            "visibleRule": "inputAiProvider == Custom || inputAiProvider == OpenAI || inputAiProvider == Grok"
         },
         {
             "name": "inputGitHubCopilotNetworkType",
@@ -123,15 +78,6 @@
             "defaultValue": "",
             "required": false,
             "helpMarkDown": "(Optional) Enter GitHub Copilot CLI Server address (IP or Domain + Port). Example: 192.168.1.100:8080. If not provided, will use GitHub Copilot CLI in Build Agent.",
-            "visibleRule": "inputAiProvider == GitHubCopilot && inputGitHubCopilotNetworkType == Intranet"
-        },
-        {
-            "name": "inputGitHubCopilotModelName",
-            "type": "string",
-            "label": "GitHub Copilot Model Name",
-            "defaultValue": "gpt-4o",
-            "required": true,
-            "helpMarkDown": "Optional. Defaults to gpt-4o.",
             "visibleRule": "inputAiProvider == GitHubCopilot && inputGitHubCopilotNetworkType == Intranet"
         },
         {

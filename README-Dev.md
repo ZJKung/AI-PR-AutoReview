@@ -1,122 +1,122 @@
-## AI PR AutoReview — 本地開發 & 發佈說明
+## AI PR AutoReview — Local Development & Publishing Guide
 
-此文件說明如何在本機環境測試與開發本專案（AI PR 自動 Code Review），包含 package.json 中常用的 scripts 使用情境、`devscripts/.env` 的用途以及打包與發佈（Marketplace）的 SOP。
+This document explains how to test and develop this project (AI PR Auto Code Review) in a local environment, including commonly used scripts in package.json, the purpose of `devscripts/.env`, and the SOP for packaging and publishing to the Marketplace.
 
 
-## 專案資料夾結構
+## Project Folder Structure
 ```
 d:\Project\AiPrCodeReview
-├── devscripts/              # 本地測試腳本
-│   ├── .env                 # 環境變數設定檔（請勿提交正式環境的金鑰）
-│   ├── ai-comment.ts        # 測試 AI 服務 (Google/OpenAI/Grok/Claude)
-│   ├── pr-changes.ts        # 測試取得 PR 變更
-│   └── pr-comment.ts        # 測試新增 PR 評論
-├── images/                  # 擴充功能圖示
+├── devscripts/              # Local test scripts
+│   ├── .env                 # Environment variable config (do not commit real keys)
+│   ├── ai-comment.ts        # Test AI services (Google/OpenAI/Grok/Claude)
+│   ├── pr-changes.ts        # Test fetching PR changes
+│   └── pr-comment.ts        # Test adding PR comments
+├── images/                  # Extension icons
 │   ├── extension-icon.png
 │   └── extension-icon-small.png
-├── packages/                # 打包輸出資料夾（VSIX 檔案）
-├── screenshots/             # 說明文件截圖
-├── scripts/                 # 建置腳本
-│   └── sync-taskjson.js     # 同步版本號至 task.json 和 package.json
-├── src/                     # 主要程式碼
-│   ├── interfaces/          # TypeScript 介面定義
-│   │   ├── ai-service.interface.ts           # AI 服務介面定義
-│   │   ├── devops-service.interface.ts       # DevOps 服務介面定義
-│   │   └── pipeline-inputs.interface.ts      # Pipeline 輸入參數介面定義
-│   ├── services/            # 服務實作
-│   │   ├── ai-provider.service.ts            # AI 服務進入點，AI 服務提供者管理器（統一管理所有 AI 服務）
-│   │   ├── base-ai.service.ts                # AI 服務抽象基礎類別（提供共用邏輯）
-│   │   ├── base-http-ai.service.ts           # HTTP AI 服務基礎類別（提供共用 Axios 邏輯）
-│   │   ├── base-openai-compatible.service.ts # OpenAI 相容服務基礎類別
-│   │   ├── base-devops.service.ts            # DevOps 服務抽象基礎類別（提供共用邏輯）
-│   │   ├── azure-devops.service.ts           # Azure DevOps 服務實作
-│   │   ├── github-devops.service.ts          # GitHub 服務實作
-│   │   ├── devops-provider.service.ts        # DevOps 服務進入點，DevOps 服務提供者管理器（統一管理 Azure/GitHub）
-│   │   ├── google-ai.service.ts              # Google Gemini AI 服務實作
-│   │   ├── openai.service.ts                 # OpenAI 服務實作
-│   │   ├── grok.service.ts                   # Grok (xAI) 服務實作
-│   │   ├── claude.service.ts                 # Claude (Anthropic) 服務實作
-│   │   └── github-copilot.service.ts         # GitHub Copilot 服務實作
-│   ├── index.ts             # 主程式進入點
-│   └── task.json            # Azure Pipeline Task 定義檔
-├── package.json             # npm 套件設定
-├── tsconfig.json            # TypeScript 編譯設定
-├── tsconfig.devscripts.json # devscripts 編譯設定
-├── vss-extension.json       # Azure DevOps 擴充功能清單
-├── README.md                # 專案說明文件(英文版)
-├── README.zh-TW.md          # 專案說明文件(繁體中文版)
-├── README-Dev.md            # 開發者說明文件
-└── LICENSE.txt              # 授權條款
-``` 
-
-
-## 主要 Scripts
-- 使用 `npm run build` 執行完整建置流程（同步版本號、型別檢查、打包、複製檔案）。
-- 使用 `npm run packaging:package` 建置 Marketplace 套件。
-- `devscripts/.env`，此環境變數主要用於本地開發測試。
-- `devscripts` 內有多個測試腳本和工具
-  + `npm run devscripts:ai` - 測試 AI 服務
-  + `npm run devscripts:pr-changes` - 測試取得 PR 變更
-  + `npm run devscripts:pr-comment` - 測試新增 PR 評論
-  + `npx ts-node DEVSCRIPTS/test-pr-review.ts` - 完整 PR 審查測試工具（詳見下方說明）
-- 本地開發模擬 pipeline 執行，請修改好 `devscripts/.env` 後，執行 `npm run debug`。
-- 執行單元測試：`npm test` (使用 `mocha` 和 `ts-node` 執行 `test/**/*.spec.ts`)。
-
-
-## Scripts 與使用情境
-- `npm run clean`：清理 `dist/` 輸出資料夾。
-- `npm run typecheck`：執行 TypeScript 型別檢查（不產生檔案）。
-- `npm run copy`：將 `src/task.json` 和 `images/extension-icon-small.png` 複製至 `dist/`。
-- `npm run bundle`：使用 `esbuild` 將 TypeScript 打包至 `dist/index.js`。
-- `npm run build`：執行完整建置流程，包含同步版本號（`sync-taskjson.js`）、清理、型別檢查、打包與複製檔案。
-- `npm run debug`：編譯後以 debug 模式執行（package.json 內為 `tsc && node --env-file=./devscripts/.env ./dist/index.js --debug`），會改為從環境變數讀取輸入值（方便本地模擬）。
-- `npm run devscripts:ai`：編譯 devscripts（使用 `tsconfig.devscripts.json`）並執行 `dist/devscripts/ai-comment.js`，執行呼叫 AI 服務並印出回應。
-- `npm run devscripts:pr-changes`：執行取得 PR 變更檔案並列印內容（需有效的 DevOps env 設定）。
-- `npm run devscripts:pr-comment`：執行 DevOps API 新增 PR 評論（需有效的 DevOps env 設定）。
-- `npm run packaging:install-tool`：安裝 `tfx-cli`（全域）以便打包與上傳。
-- `npm run packaging:package`：建立 VSIX 包（使用 `vss-extension.json`）。
-
-### test-pr-review.ts 測試工具
-
-`test-pr-review.ts` 是一個完整的 PR 審查測試工具，用於本地快速測試完整的 PR 審查流程（包括取得 PR 變更和調用 AI 服務）。
-
-**使用方式**：
-```bash
-npx ts-node DEVSCRIPTS/test-pr-review.ts [參數]
+├── packages/                # Package output folder (VSIX files)
+├── screenshots/             # Documentation screenshots
+├── scripts/                 # Build scripts
+│   └── sync-taskjson.js     # Sync version numbers to task.json and package.json
+├── src/                     # Main source code
+│   ├── interfaces/          # TypeScript interface definitions
+│   │   ├── ai-service.interface.ts           # AI service interface definitions
+│   │   ├── devops-service.interface.ts       # DevOps service interface definitions
+│   │   └── pipeline-inputs.interface.ts      # Pipeline input parameter interface definitions
+│   ├── services/            # Service implementations
+│   │   ├── ai-provider.service.ts            # AI service entry point, AI provider manager (unified management of all AI services)
+│   │   ├── base-ai.service.ts                # AI service abstract base class (shared logic)
+│   │   ├── base-http-ai.service.ts           # HTTP AI service base class (shared Axios logic)
+│   │   ├── base-openai-compatible.service.ts # OpenAI-compatible service base class
+│   │   ├── base-devops.service.ts            # DevOps service abstract base class (shared logic)
+│   │   ├── azure-devops.service.ts           # Azure DevOps service implementation
+│   │   ├── github-devops.service.ts          # GitHub service implementation
+│   │   ├── devops-provider.service.ts        # DevOps service entry point, DevOps provider manager (unified Azure/GitHub management)
+│   │   ├── google-ai.service.ts              # Google Gemini AI service implementation
+│   │   ├── openai.service.ts                 # OpenAI service implementation
+│   │   ├── grok.service.ts                   # Grok (xAI) service implementation
+│   │   ├── claude.service.ts                 # Claude (Anthropic) service implementation
+│   │   └── github-copilot.service.ts         # GitHub Copilot service implementation
+│   ├── index.ts             # Main entry point
+│   └── task.json            # Azure Pipeline Task definition file
+├── package.json             # npm package configuration
+├── tsconfig.json            # TypeScript compiler configuration
+├── tsconfig.devscripts.json # devscripts compiler configuration
+├── vss-extension.json       # Azure DevOps extension manifest
+├── README.md                # Project documentation (English)
+├── README.zh-TW.md          # Project documentation (Traditional Chinese)
+├── README-Dev.md            # Developer documentation
+└── LICENSE.txt              # License
 ```
 
-**必要參數**：
-- `--provider <azure|github>` - DevOps 提供者（Azure DevOps 或 GitHub）
+
+## Main Scripts
+- Use `npm run build` to run the full build process (sync version numbers, type checking, bundling, copying files).
+- Use `npm run packaging:package` to build the Marketplace package.
+- `devscripts/.env` — environment variables primarily used for local development testing.
+- `devscripts` contains several test scripts and tools:
+  + `npm run devscripts:ai` - Test AI services
+  + `npm run devscripts:pr-changes` - Test fetching PR changes
+  + `npm run devscripts:pr-comment` - Test adding PR comments
+  + `npx ts-node DEVSCRIPTS/test-pr-review.ts` - Full PR review test tool (see details below)
+- To simulate pipeline execution locally, edit `devscripts/.env` then run `npm run debug`.
+- Run unit tests: `npm test` (uses `mocha` and `ts-node` to execute `test/**/*.spec.ts`).
+
+
+## Scripts & Use Cases
+- `npm run clean`: Clean the `dist/` output folder.
+- `npm run typecheck`: Run TypeScript type checking (no output files generated).
+- `npm run copy`: Copy `src/task.json` and `images/extension-icon-small.png` to `dist/`.
+- `npm run bundle`: Bundle TypeScript to `dist/index.js` using `esbuild`.
+- `npm run build`: Run the full build process, including version sync (`sync-taskjson.js`), clean, type check, bundle, and copy files.
+- `npm run debug`: Compile then run in debug mode (package.json runs `tsc && node --env-file=./devscripts/.env ./dist/index.js --debug`), which reads input values from environment variables (convenient for local simulation).
+- `npm run devscripts:ai`: Compile devscripts (using `tsconfig.devscripts.json`) and execute `dist/devscripts/ai-comment.js` — calls the AI service and prints the response.
+- `npm run devscripts:pr-changes`: Fetch PR changed files and print their content (requires valid DevOps env settings).
+- `npm run devscripts:pr-comment`: Add a PR comment via the DevOps API (requires valid DevOps env settings).
+- `npm run packaging:install-tool`: Install `tfx-cli` (globally) for packaging and uploading.
+- `npm run packaging:package`: Create a VSIX package (using `vss-extension.json`).
+
+### test-pr-review.ts Test Tool
+
+`test-pr-review.ts` is a comprehensive PR review test tool for quickly testing the full PR review workflow locally (including fetching PR changes and invoking AI services).
+
+**Usage**:
+```bash
+npx ts-node DEVSCRIPTS/test-pr-review.ts [options]
+```
+
+**Required Parameters**:
+- `--provider <azure|github>` - DevOps provider (Azure DevOps or GitHub)
 - `--pr <PR_ID>` - Pull Request ID
 
-**Azure DevOps 參數**（當 provider=azure 時必填）：
-- `--org <URL>` - Organization URL（例如：https://dev.azure.com/yourorg）
-- `--project <PROJECT>` - 專案名稱
+**Azure DevOps Parameters** (required when provider=azure):
+- `--org <URL>` - Organization URL (e.g. https://dev.azure.com/yourorg)
+- `--project <PROJECT>` - Project name
 - `--repo-id <ID>` - Repository ID
-- `--token <TOKEN>` - Personal Access Token（或使用環境變數 SYSTEM_ACCESSTOKEN）
+- `--token <TOKEN>` - Personal Access Token (or use env var SYSTEM_ACCESSTOKEN)
 
-**GitHub 參數**（當 provider=github 時必填）：
+**GitHub Parameters** (required when provider=github):
 - `--owner <USER>` - Repository owner
 - `--repo <REPO>` - Repository name
 - `--token <TOKEN>` - GitHub token
 
-**GitHub Copilot 參數**
-- `--serverAddress` - GitHub Copilot CLI Server 位址
-- `--timeout` - GitHub Copilot CLI 請求超時時間 (毫秒) 
+**GitHub Copilot Parameters**
+- `--serverAddress` - GitHub Copilot CLI Server address
+- `--timeout` - GitHub Copilot CLI request timeout (ms)
 
-**AI 提供者參數**：
-- `--ai <PROVIDER>` - AI 提供者：'claude', 'openai', 'grok', 'google'（預設：claude）
-- `--model <MODEL_NAME>` - 模型名稱（例如：claude-haiku-4-5、gpt-4o、gemini-2.5-flash）
-- `--key <API_KEY>` - API Key（或使用環境變數）
+**AI Provider Parameters**:
+- `--ai <PROVIDER>` - AI provider: 'claude', 'openai', 'grok', 'google' (default: claude)
+- `--model <MODEL_NAME>` - Model name (e.g. claude-haiku-4-5, gpt-4o, gemini-2.5-flash)
+- `--key <API_KEY>` - API Key (or use environment variables)
 
-**功能開關參數**：
-- `--throttle <true|false>` - 啟用節流模式（預設：true，僅送差異）
-- `--incremental <true|false>` - 啟用增量 Diff 模式（預設：false）
-- `--verbose <true|false>` - 顯示詳細日誌（預設：true）
+**Feature Flag Parameters**:
+- `--throttle <true|false>` - Enable throttle mode (default: true, diff only)
+- `--incremental <true|false>` - Enable incremental diff mode (default: false)
+- `--verbose <true|false>` - Show verbose logs (default: true)
 
-**使用範例**：
+**Usage Examples**:
 
-1. **Azure DevOps + Claude，啟用增量 Diff**
+1. **Azure DevOps + Claude, with Incremental Diff**
 ```bash
 npx ts-node DEVSCRIPTS/test-pr-review.ts \
   --provider azure \
@@ -130,7 +130,7 @@ npx ts-node DEVSCRIPTS/test-pr-review.ts \
   --incremental true
 ```
 
-2. **Azure DevOps + Google Gemini，全量 Diff**
+2. **Azure DevOps + Google Gemini, Full Diff**
 ```bash
 npx ts-node DEVSCRIPTS/test-pr-review.ts \
   --provider azure \
@@ -145,7 +145,7 @@ npx ts-node DEVSCRIPTS/test-pr-review.ts \
   --incremental false
 ```
 
-3. **GitHub + OpenAI，禁用節流模式**
+3. **GitHub + OpenAI, Throttle Mode Disabled**
 ```bash
 npx ts-node DEVSCRIPTS/test-pr-review.ts \
   --provider github \
@@ -173,51 +173,51 @@ npx ts-node DEVSCRIPTS/test-pr-review.ts \
   --timeout 120000
 ```
 
-**輸出說明**：
-- 顯示當前配置設定
-- 取得 PR 變更檔案（顯示檔案數量、檔案大小、Token 數量）
-- 調用 AI 服務進行審查
-- 印出 AI 的審查結果
+**Output Description**:
+- Displays current configuration settings
+- Fetches PR changed files (shows file count, file size, token count)
+- Invokes the AI service for review
+- Prints the AI review result
 
-**常見用途**：
-- 測試特定 PR 的增量 Diff 功能
-- 驗證 AI 審查結果品質
-- 測試不同 AI 提供者的表現
-- 調試 Token 計算和節流模式設定
+**Common Use Cases**:
+- Test incremental diff functionality for a specific PR
+- Verify AI review result quality
+- Test different AI providers' performance
+- Debug token calculation and throttle mode settings
 
 
 
-## devscripts/.env：用途與本機測試
+## devscripts/.env: Purpose & Local Testing
 
-`devscripts/.env` 用於在本機快速設定`測試`需要的變數，讓 `devscripts` 下的測試腳本與 `src/index.ts` 的 debug 模式能夠模擬實際 Azure DevOps pipeline 與 AI Provider 的互動，請務必不要把含有真實金鑰或 PAT 的檔案提交到版本控制。
+`devscripts/.env` is used to quickly set up variables needed for local `testing`, allowing the test scripts under `devscripts` and the debug mode in `src/index.ts` to simulate actual Azure DevOps pipeline and AI Provider interactions. **Never commit files containing real keys or PATs to version control.**
 
-下表列出常用變數及說明：
+The following table lists commonly used variables and their descriptions:
 
-| 變數名稱 | 必要性 | 範例 | 說明 |
-|---|:---:|---|---|
-| DevOpsOrgUrl | 必要 | https://dev.azure.com/YourOrganization/ | Azure DevOps collection / 組織 URL |
-| DevOpsAccessToken | 必要 | pat... | Personal Access Token (PAT)，需能讀取 PR、發表評論 |
-| DevOpsProjectName | 必要 | YourProject | Azure DevOps 專案名稱 |
-| DevOpsRepositoryId | 必要 | 00000000-0000-0000-0000-000000000000 | Repository ID（或在某些實作中可用 repo 名稱） |
-| DevOpsPRId | 必要 | 4 | 要測試的 Pull Request 編號 |
-| AiProvider | 必要 | Google | 在 `AIProviderService` 中註冊的 provider 名稱（例如 `Google`、`OpenAI`、`Grok`） |
-| GeminiAPIKey | 選用 | AI_KEY | Gemi API Key，若使用 Google 時，此欄位必填 |
-| OpenAIAPIKey | 選用 | sk-... | OpenAI API Key，若使用 OpenAI 時，此欄位必填 |
-| GrokAPIKey | 選用 | xai-... | Grok (xAI) API Key，若使用 Grok 時，此欄位必填 |
-| ClaudeAPIKey | 選用 | sk-ant-... | Claude API Key，若使用 Claude 時，此欄位必填 |
-| GitHubCopilotServerAddress | 選用 | localhost:8080 | GitHub Copilot CLI Server 位址（格式: host:port）。若未提供，將使用本機的 GitHub Copilot CLI（需先完成 `copilot auth login`） |
-| ModelName | 必要 | gemini-2.5-flash | 要使用的模型名稱（例如 gemini-2.5-flash、gpt-4o、grok-beta、claude-haiku-4-5） |
-| SystemInstruction | 選用 | 你是一位資深工程師... | 傳給 AI 的 system 指令 |
-| PromptTemplate | 必要 | {code_changes} | Prompt 範本，index.ts 以 `{code_changes}` 作為佔位符 |
-| MaxOutputTokens | 選用 | 4096 | AI 回應最大 token 數量 |
-| Temperature | 選用 | 1.0 | AI 生成隨機性 |
-| FileExtensions | 選用 | .cs,.ts,.js | 要納入的檔案副檔名（逗號分隔） |
-| BinaryExtensions | 選用 | .exe,.dll,.jpg | 要排除的二進位檔副檔名 |
-| EnableThrottleMode | 選用 | true | 啟用 AI 節流模式（true：僅送差異；false：送整個檔案） |
-| EnableIncrementalDiff | 選用 | false | 啟用增量 Diff 模式（true：僅審查最新 push；false：審查所有 PR 變更）。**注意**：只有當 `EnableThrottleMode` 為 `true` 時此選項才有效 |
-| ShowReviewContent | 選用 | false | 顯示審核內容（true：印出送給 AI 的程式碼內容、System Instruction、Prompt 以及 AI 回應；false：不顯示） |
+| Variable Name              | Required | Example                                 | Description                                                                                                                                                                 |
+| -------------------------- | :------: | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| DevOpsOrgUrl               | Required | https://dev.azure.com/YourOrganization/ | Azure DevOps collection / organization URL                                                                                                                                  |
+| DevOpsAccessToken          | Required | pat...                                  | Personal Access Token (PAT), must have PR read and comment write permissions                                                                                                |
+| DevOpsProjectName          | Required | YourProject                             | Azure DevOps project name                                                                                                                                                   |
+| DevOpsRepositoryId         | Required | 00000000-0000-0000-0000-000000000000    | Repository ID (or repo name in some implementations)                                                                                                                        |
+| DevOpsPRId                 | Required | 4                                       | Pull Request number to test                                                                                                                                                 |
+| AiProvider                 | Required | Google                                  | Provider name registered in `AIProviderService` (e.g. `Google`, `OpenAI`, `Grok`)                                                                                           |
+| GeminiAPIKey               | Optional | AI_KEY                                  | Gemini API Key, required when using Google                                                                                                                                  |
+| OpenAIAPIKey               | Optional | sk-...                                  | OpenAI API Key, required when using OpenAI                                                                                                                                  |
+| GrokAPIKey                 | Optional | xai-...                                 | Grok (xAI) API Key, required when using Grok                                                                                                                                |
+| ClaudeAPIKey               | Optional | sk-ant-...                              | Claude API Key, required when using Claude                                                                                                                                  |
+| GitHubCopilotServerAddress | Optional | localhost:8080                          | GitHub Copilot CLI Server address (format: host:port). If not provided, the local GitHub Copilot CLI will be used (requires `copilot auth login` first)                     |
+| ModelName                  | Required | gemini-2.5-flash                        | Model name to use (e.g. gemini-2.5-flash, gpt-4o, grok-beta, claude-haiku-4-5)                                                                                              |
+| SystemInstruction          | Optional | You are a senior engineer...            | System instruction sent to the AI                                                                                                                                           |
+| PromptTemplate             | Required | {code_changes}                          | Prompt template, index.ts uses `{code_changes}` as placeholder                                                                                                              |
+| MaxOutputTokens            | Optional | 4096                                    | Maximum token count for AI response                                                                                                                                         |
+| Temperature                | Optional | 1.0                                     | AI generation randomness                                                                                                                                                    |
+| FileExtensions             | Optional | .cs,.ts,.js                             | File extensions to include (comma-separated)                                                                                                                                |
+| BinaryExtensions           | Optional | .exe,.dll,.jpg                          | Binary file extensions to exclude                                                                                                                                           |
+| EnableThrottleMode         | Optional | true                                    | Enable AI throttle mode (true: send diff only; false: send entire file)                                                                                                     |
+| EnableIncrementalDiff      | Optional | false                                   | Enable incremental diff mode (true: review only the latest push; false: review all PR changes). **Note**: This option only takes effect when `EnableThrottleMode` is `true` |
+| ShowReviewContent          | Optional | false                                   | Show review content (true: print code content sent to AI, System Instruction, Prompt, and AI response; false: do not display)                                               |
 
-.env 範例說明（切勿提交含真實金鑰的檔案）：
+.env example (never commit files with real keys):
 
 ```properties
 # Azure DevOps
@@ -227,17 +227,17 @@ DevOpsProjectName=YourProject
 DevOpsRepositoryId=00000000-0000-0000-0000-000000000000
 DevOpsPRId=4
 
-# AI Provider (選擇其一：Google / OpenAI / Grok / Claude / GitHubCopilot)
+# AI Provider (choose one: Google / OpenAI / Grok / Claude / GitHubCopilot)
 GeminiAPIKey=PASTE_YOUR_GEMINI_KEY
 OpenAIAPIKey=PASTE_YOUR_OPENAI_KEY
 GrokAPIKey=PASTE_YOUR_GROK_KEY
 ClaudeAPIKey=PASTE_YOUR_CLAUDE_KEY
 AiProvider=Google
 ModelName=gemini-2.5-flash
-# GitHub Copilot (選用：若未填寫則使用本機 CLI)
+# GitHub Copilot (optional: uses local CLI if not specified)
 GitHubCopilotServerAddress=localhost:8080
 
-SystemInstruction=你是一位資深軟體工程師，請協助進行程式碼審查與分析。
+SystemInstruction=You are a senior software engineer. Please help with code review and analysis.
 PromptTemplate={code_changes}
 MaxOutputTokens=4096
 Temperature=1.0
@@ -252,274 +252,274 @@ EnableIncrementalDiff=false
 ShowReviewContent=false
 ```
 
-注意：`src/index.ts` 在 debug 模式會從 `process.env` 讀取（而非 Azure Pipelines 的變數）。
+Note: `src/index.ts` reads from `process.env` in debug mode (instead of Azure Pipelines variables).
 
-### 環境變數說明
+### Environment Variable Details
 
-#### EnableThrottleMode（節流模式）
-- **預設值**：`true`（啟用）
-- **說明**：控制是否僅送程式碼差異給 AI，或送整個檔案內容
-  - `true`：節流模式啟用，僅送程式碼 diff
-  - `false`：關閉節流模式，送整個新檔案內容
+#### EnableThrottleMode (Throttle Mode)
+- **Default**: `true` (enabled)
+- **Description**: Controls whether only code diffs are sent to the AI, or the entire file content
+  - `true`: Throttle mode enabled, sends only code diff
+  - `false`: Throttle mode disabled, sends full new file content
 
-#### EnableIncrementalDiff（增量 Diff 模式）
-- **預設值**：`false`（停用）
-- **重要提示**：此選項只有在 `EnableThrottleMode=true` 時才有效
-- **說明**：控制是否只審查最新 push 的變更，或審查所有 iteration 的變更
-  - `true`：增量模式，僅審查最新推送的變更
-  - `false`：全量模式，審查所有 PR 迭代的變更
+#### EnableIncrementalDiff (Incremental Diff Mode)
+- **Default**: `false` (disabled)
+- **Important**: This option only takes effect when `EnableThrottleMode=true`
+- **Description**: Controls whether to review only the latest push changes, or all iteration changes
+  - `true`: Incremental mode, reviews only the latest push changes
+  - `false`: Full mode, reviews all PR iteration changes
 
-**範例場景**：
-- PR 有 3 次推送（3 個 iterations）
-- Iteration 1：新增檔案 A
-- Iteration 2：在檔案 A 中新增方法 B
-- Iteration 3：在方法 B 中新增註釋
+**Example Scenario**:
+- PR has 3 pushes (3 iterations)
+- Iteration 1: Add file A
+- Iteration 2: Add method B in file A
+- Iteration 3: Add comments in method B
 
-**不同模式的結果**：
-- `EnableThrottleMode=true, EnableIncrementalDiff=false`：審查所有變更（A 新增 + 方法 B 新增 + 註釋新增）
-- `EnableThrottleMode=true, EnableIncrementalDiff=true`：只審查最新變更（只有註釋新增）
-- `EnableThrottleMode=false, EnableIncrementalDiff=false`：送整個檔案內容給 AI（包含所有內容）
-- `EnableThrottleMode=false, EnableIncrementalDiff=true`：無作用，等同於 `false, false`（送整個檔案內容）
+**Results for Different Modes**:
+- `EnableThrottleMode=true, EnableIncrementalDiff=false`: Reviews all changes (A added + method B added + comments added)
+- `EnableThrottleMode=true, EnableIncrementalDiff=true`: Reviews only the latest changes (only comment additions)
+- `EnableThrottleMode=false, EnableIncrementalDiff=false`: Sends entire file content to AI (including everything)
+- `EnableThrottleMode=false, EnableIncrementalDiff=true`: No effect, equivalent to `false, false` (sends entire file content)
 
 
-## 快速開始（PowerShell 範例）
-1. 安裝相依套件
+## Quick Start (PowerShell Example)
+1. Install dependencies
 
 ```powershell
 npm install
 ```
 
-2. 建置(非必要)
+2. Build (optional)
 
 ```powershell
 npm run build
 ```
 
-3. 本地執行（使用 devscripts/.env 作為範例）
+3. Run locally (using devscripts/.env as example)
 
 ```powershell
-# 執行完整流程
+# Run the full workflow
 npm run debug
 
-# 或執行 devscripts 測試：
+# Or run devscripts tests:
 npm run devscripts:ai
 npm run devscripts:pr-changes
 npm run devscripts:pr-comment
 ```
 
 
-## 增量 Diff 模式實作詳解
+## Incremental Diff Mode — Implementation Details
 
-### 核心概念
+### Core Concept
 
-增量 Diff 模式用於處理多次推送（iterations）的 PR 場景。Azure DevOps 中的 PR iteration 代表每次 `git push` 的操作，每次推送都會產生一個新的 iteration。
+Incremental diff mode handles PR scenarios with multiple pushes (iterations). In Azure DevOps, a PR iteration represents each `git push` operation — each push produces a new iteration.
 
-### 實作位置
+### Implementation Location
 
-主要實作在 `src/services/azure-devops.service.ts` 中：
+Main implementation is in `src/services/azure-devops.service.ts`:
 
-1. **方法：`verifyPullRequestChanges()`** - 取得 PR 變更
-   - 根據 `enableIncrementalDiff` 參數決定要比較的 iteration
-   - 啟用時：取得最後一個 iteration 和前一個 iteration，進行比較
-   - 禁用時：取得最後一個 iteration（與基礎分支的完整差異）
+1. **Method: `verifyPullRequestChanges()`** — Fetch PR changes
+   - Determines which iterations to compare based on the `enableIncrementalDiff` parameter
+   - When enabled: Gets the last iteration and the previous one for comparison
+   - When disabled: Gets the last iteration (full diff against the base branch)
 
-2. **方法：`calculateIncrementalChanges()`** - 計算增量變更
-   - 透過比較 objectId 判斷檔案是否在最新 iteration 中被修改
-   - 只保留新增或修改的檔案
+2. **Method: `calculateIncrementalChanges()`** — Calculate incremental changes
+   - Compares objectId to determine if a file was modified in the latest iteration
+   - Retains only added or modified files
 
-3. **方法：`getChangeDetails()`** - 取得檔案變更詳情
-   - 核心修改：當啟用增量模式時，從 **前一個 iteration** 獲取舊版本檔案
-   - 而非使用基礎分支版本，這樣產生的 diff 才是真正的增量變更
+3. **Method: `getChangeDetails()`** — Get file change details
+   - Key modification: When incremental mode is enabled, retrieves the old version from the **previous iteration**
+   - Instead of using the base branch version, so the diff reflects true incremental changes
 
-### 工作流程
-
-```
-啟用增量 Diff 時的流程：
-PR 有 3 個 iterations （i1, i2, i3）
-
-1. verifyPullRequestChanges()：
-   └─ 比較 iteration 3 vs iteration 2
-   └─ 取出在 iteration 3 中有變更的檔案清單
-
-2. calculateIncrementalChanges()：
-   └─ 過濾檔案：只保留 objectId 不同的檔案
-   └─ 輸出：只有在 i3 中修改過的檔案
-
-3. getChangeDetails()：
-   ├─ 對於每個修改的檔案
-   ├─ 取得 i3 版本（sourceContent）
-   ├─ 從前一個 iteration（i2）取得舊版本（targetContent）
-   └─ 生成 diff：i3 版本 vs i2 版本
-
-結果：diff 只顯示 i3 中實際修改的內容
-```
-
-禁用增量 Diff 時的流程：
+### Workflow
 
 ```
-禁用時的流程：
-PR 有 3 個 iterations
+Workflow with Incremental Diff enabled:
+PR has 3 iterations (i1, i2, i3)
 
-1. verifyPullRequestChanges()：
-   └─ 取得 iteration 3 的所有變更（最終狀態）
+1. verifyPullRequestChanges():
+   └─ Compare iteration 3 vs iteration 2
+   └─ Extract the list of files changed in iteration 3
 
-2. calculateIncrementalChanges()：
-   └─ 跳過此步驟
+2. calculateIncrementalChanges():
+   └─ Filter files: keep only those with different objectId
+   └─ Output: only files modified in i3
 
-3. getChangeDetails()：
-   ├─ 對於每個檔案
-   ├─ 取得 i3 版本（sourceContent）
-   ├─ 取得基礎分支版本（targetContent 來自 originalObjectId）
-   └─ 生成 diff：i3 版本 vs 基礎分支版本
+3. getChangeDetails():
+   ├─ For each modified file
+   ├─ Get i3 version (sourceContent)
+   ├─ Get old version from previous iteration i2 (targetContent)
+   └─ Generate diff: i3 version vs i2 version
 
-結果：diff 顯示所有從基礎分支開始的所有變更（包含 i1, i2, i3）
+Result: diff shows only the actual changes made in i3
 ```
 
-### 重要特性
+Workflow with Incremental Diff disabled:
 
-1. **依賴節流模式**：增量 Diff 只有在 `enableThrottleMode=true` 時才有效
-   - 節流模式負責決定是送 diff 還是整個檔案
-   - 增量模式負責決定 diff 的範圍
+```
+Workflow when disabled:
+PR has 3 iterations
 
-2. **自動回退**：PR 只有 1 個 iteration 時
-   - 增量模式自動變成全量模式
-   - 因為沒有「前一個」iteration 可以比較
+1. verifyPullRequestChanges():
+   └─ Get all changes from iteration 3 (final state)
 
-3. **Token 優化**：結合使用時效果最佳
+2. calculateIncrementalChanges():
+   └─ Skip this step
+
+3. getChangeDetails():
+   ├─ For each file
+   ├─ Get i3 version (sourceContent)
+   ├─ Get base branch version (targetContent from originalObjectId)
+   └─ Generate diff: i3 version vs base branch version
+
+Result: diff shows all changes from the base branch (including i1, i2, i3)
+```
+
+### Key Characteristics
+
+1. **Depends on Throttle Mode**: Incremental diff only works when `enableThrottleMode=true`
+   - Throttle mode determines whether to send diff or the entire file
+   - Incremental mode determines the scope of the diff
+
+2. **Auto Fallback**: When a PR has only 1 iteration
+   - Incremental mode automatically falls back to full mode
+   - Because there is no "previous" iteration to compare against
+
+3. **Token Optimization**: Best results when used together
    - `enableThrottleMode=true` + `enableIncrementalDiff=true`
-   - 最少的內容 → 最少的 token 消耗 → 最低成本
+   - Minimum content → minimum token consumption → lowest cost
 
 
-## GitHub Copilot 整合說明
+## GitHub Copilot Integration
 
-### 架構設計
+### Architecture Design
 
-GitHub Copilot 的整合與其他 AI Providers 有一些不同：
+GitHub Copilot integration differs from other AI providers in several ways:
 
-1. **不繼承 BaseAIService**
-   - `GithubCopilotService` 直接實作 `AIService` 介面
-   - 原因：GitHub Copilot 不需要 API Key（認證由 CLI Server 處理）
-   - BaseAIService 的 constructor 會強制驗證 API Key
+1. **Does Not Extend BaseAIService**
+   - `GithubCopilotService` directly implements the `AIService` interface
+   - Reason: GitHub Copilot does not require an API Key (authentication is handled by the CLI Server)
+   - BaseAIService's constructor enforces API Key validation
 
-2. **使用官方 SDK**
-   - 使用 `@github/copilot-sdk` 連接到 CLI Server
-   - SDK 版本：0.1.21（Technical Preview）
+2. **Uses the Official SDK**
+   - Uses `@github/copilot-sdk` to connect to the CLI Server
+   - SDK version: 0.1.21 (Technical Preview)
 
-3. **延遲初始化**
-   - Client 連接在首次呼叫 `generateComment()` 時建立
-   - 避免啟動時連接失敗影響整體服務
+3. **Lazy Initialization**
+   - Client connection is established on the first call to `generateComment()`
+   - Avoids startup connection failures affecting the overall service
 
-### 關鍵實作細節
+### Key Implementation Details
 
-1. **Server 位址設定**
-   - 使用 `cliUrl` 選項連接到現有 CLI Server
-   - 支援格式：`host:port`、`localhost:8080`、`127.0.0.1:8080`
+1. **Server Address Configuration**
+   - Uses the `cliUrl` option to connect to an existing CLI Server
+   - Supported formats: `host:port`, `localhost:8080`, `127.0.0.1:8080`
 
-2. **Session 管理**
-   - 每個請求建立獨立的 session
-   - 使用 `systemMessage.content` 傳遞 system instruction
-   - 使用 `sendAndWait()` 發送並等待回應
-   - 完成後呼叫 `session.destroy()` 清理資源
+2. **Session Management**
+   - Each request creates an independent session
+   - Uses `systemMessage.content` to pass the system instruction
+   - Uses `sendAndWait()` to send and wait for the response
+   - Calls `session.destroy()` after completion to clean up resources
 
-3. **Token Usage 追蹤**
-   - 嘗試從 SDK 回應中提取 usage 資訊
-   - 若不可用，使用估算（字元數 / 4）
-   - 日誌明確標註是實際值或估算值
+3. **Token Usage Tracking**
+   - Attempts to extract usage information from the SDK response
+   - If unavailable, uses estimation (character count / 4)
+   - Logs clearly indicate whether values are actual or estimated
 
-### 現有限制
+### Known Limitations
 
-1. **SDK 處於 Technical Preview**
-   - API 可能變動需要調整
-   - 已設計彈性介面便於未來調整
+1. **SDK is in Technical Preview**
+   - API may change and require adjustments
+   - Flexible interfaces are designed for future adaptation
 
-2. **僅支援內部網路模式**
-   - 網際網路模式將在未來版本提供
-   - 將整合 MCP Server 連接雲端 Copilot
+2. **Internal Network Mode Only**
+   - Internet mode will be available in future versions
+   - Will integrate MCP Server for cloud-based Copilot connection
 
-3. **不支援 Temperature 和 MaxTokens**
-   - SDK 不直接支援這些參數
-   - 未來可能需透過 provider config 設定
+3. **Temperature and MaxTokens Not Supported**
+   - The SDK does not directly support these parameters
+   - May need provider config settings in the future
 
-### 測試建議
+### Testing Recommendations
 
-#### 方案 1：使用遠端 CLI Server
-1. **設定 .env**
+#### Option 1: Using a Remote CLI Server
+1. **Set up .env**
    ```properties
    AiProvider=GitHubCopilot
    GitHubCopilotServerAddress=localhost:8080
    ModelName=gpt-4o
    ```
 
-2. **啟動測試 CLI Server**
+2. **Start the test CLI Server**
    ```bash
-   # 安裝 SDK
+   # Install the SDK
    npm install -g @github/copilot-sdk
-   
-   # 啟動 server 模式
+
+   # Start in server mode
    copilot --headless --port 8080
    ```
 
-3. **執行 debug**
+3. **Run debug**
    ```powershell
    npm run devscripts:ai
    ```
 
-#### 方案 2：使用本機 CLI（推薦）
-1. **設定 .env**（不需要 GitHubCopilotServerAddress）
+#### Option 2: Using Local CLI (Recommended)
+1. **Set up .env** (GitHubCopilotServerAddress not required)
    ```properties
    AiProvider=GitHubCopilot
    ModelName=gpt-4o
    ```
 
-2. **確認 GitHub Copilot CLI 已安裝並認證**
+2. **Confirm GitHub Copilot CLI is installed and authenticated**
    ```bash
-   # 檢查是否已安裝
+   # Check if installed
    copilot --version
-   
-   # 若未登入，執行認證
+
+   # If not logged in, authenticate
    copilot auth login
    ```
 
-3. **執行 debug**
+3. **Run debug**
    ```powershell
    npm run devscripts:ai
    ```
 
 
-## 打包與上傳 Marketplace（SOP）
-首先你需要有 Visual Studio Marketplace 的 Publisher（發佈者），並且在 `vss-extension.json` 中的 `publisher` 欄位是正確的（本 repo 內為 `LawrenceShen`）。
+## Packaging & Publishing to Marketplace (SOP)
+First, you need a Visual Studio Marketplace Publisher, and the `publisher` field in `vss-extension.json` must be correct (this repo uses `LawrenceShen`).
 
-步驟：
-1. 確認 `vss-extension.json` 中的 `version` 已經更新（每次發佈請手動遞增版本號，例如 1.0.0 → 1.0.1）。
-2. 若尚未安裝 tfx-cli，執行：
+Steps:
+1. Ensure the `version` in `vss-extension.json` has been updated (manually increment the version number before each release, e.g. 1.0.0 → 1.0.1).
+2. If tfx-cli is not yet installed, run:
 
 ```powershell
 npm run packaging:install-tool
 ```
 
-3. 建置並打包：
-完成後，會產生新版本的 VSIX 檔案到 packages 資料夾
+3. Build and package:
+Once complete, a new version VSIX file will be created in the packages folder.
 
-```powershell 
+```powershell
 npm run packaging:package
 ```
 
-4. 上傳至 marketplace：
-登入 MarketPlace 發布平台，並將打包最新的 VSIX 檔案上傳上去，如下圖所示![MarketPlace 發布平台](screenshots/marketplace.png?raw=true) 
+4. Upload to Marketplace:
+Log in to the Marketplace publishing platform and upload the latest VSIX file, as shown below: ![Marketplace Publishing Platform](screenshots/marketplace.png?raw=true)
 
 
-注意事項：
-- 確保不要在 commit 中包含任何敏感的 API key 或 PAT。
-- 每次發佈前務必更新 `vss-extension.json` 的 `version` 欄位。
+Notes:
+- Ensure no sensitive API keys or PATs are included in commits.
+- Always update the `version` field in `vss-extension.json` before each release.
 
 
-## 常見問題與除錯建議
-- 無法透過 PAT 取得 PR 內容：請檢查 PAT 權限（需要有 Code: Read & Pull Request Read/Write）。
-- AI 無回應或回應錯誤：檢查 `GeminiAPIKey` (或 `OpenAIAPIKey`/`GrokAPIKey`/`ClaudeAPIKey`)、`AiProvider`、`ModelName` 是否正確，並確認網路可連至該服務。
+## FAQ & Debugging Tips
+- Unable to fetch PR content via PAT: Check PAT permissions (requires Code: Read & Pull Request Read/Write).
+- AI not responding or returning errors: Verify `GeminiAPIKey` (or `OpenAIAPIKey`/`GrokAPIKey`/`ClaudeAPIKey`), `AiProvider`, and `ModelName` are correct, and confirm network connectivity to the service.
 
 
-## 參考文件
-- [Marketplace & 擴充性檔](https://learn.microsoft.com/zh-tw/azure/devops/marketplace-extensibility/?view=azure-devops)
-- [新增自定義管線任務擴充功能](https://learn.microsoft.com/zh-tw/azure/devops/extend/develop/add-build-task?view=azure-devops&toc=%2Fazure%2Fdevops%2Fmarketplace-extensibility%2Ftoc.json)
-- [Azure 擴充清單參考](https://learn.microsoft.com/en-us/azure/devops/extend/develop/manifest?view=azure-devops)
-- [MarketPlace 發布平台](https://marketplace.visualstudio.com/manage)
+## References
+- [Marketplace & Extensibility Documentation](https://learn.microsoft.com/en-us/azure/devops/marketplace-extensibility/?view=azure-devops)
+- [Add a Custom Pipeline Task Extension](https://learn.microsoft.com/en-us/azure/devops/extend/develop/add-build-task?view=azure-devops&toc=%2Fazure%2Fdevops%2Fmarketplace-extensibility%2Ftoc.json)
+- [Azure Extension Manifest Reference](https://learn.microsoft.com/en-us/azure/devops/extend/develop/manifest?view=azure-devops)
+- [Marketplace Publishing Platform](https://marketplace.visualstudio.com/manage)

@@ -1,19 +1,19 @@
 {
     "$schema": "https://raw.githubusercontent.com/Microsoft/azure-pipelines-task-lib/master/tasks.schema.json",
-    "id": "7fbd6a53-381e-42bd-9197-662a29d52e78",
-    "name": "AI-PR-Code-Review",
-    "friendlyName": "AI PR AutoReview",
+    "id": "91305e3c-b16c-4bf6-af43-8d586102dcd2",
+    "name": "PH-AI-PR-Code-Review",
+    "friendlyName": "PH AI PR AutoReview",
     "description": "Automated Code Review for Pull Requests. Supports GitHub Copilot, OpenAI, Google Gemini, Claude, and Grok. Bring your own AI subscription to Azure DevOps.",
     "helpMarkDown": "",
     "category": "Build",
     "visibility": [
         "Build"
     ],
-    "author": "Lawrence Shen",
+    "author": "PH-Developer",
     "version": {
         "Major": 1,
-        "Minor": 3,
-        "Patch": 6
+        "Minor": 0,
+        "Patch": 1
     },
     "instanceNameFormat": "PR AutoReview-$(inputAiProvider)",
     "inputs": [

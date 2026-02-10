@@ -1,11 +1,11 @@
 {
     "manifestVersion": 1,
-    "id": "ai-pr-autoreview",
-    "name": "AutoCodeReview.ai",
-    "version": "1.3.6",
-    "publisher": "LawrenceShen",
+    "id": "PatagoniaHealthAICodeReviewer",
+    "name": "Patagonia Health AI Code Reviewer",
+    "version": "1.0.1",
+    "publisher": "PatagoniaHealthAICodeReviewer",
     "description": "Automated Code Review for Pull Requests. Supports GitHub Copilot, OpenAI, Google Gemini, Claude, and Grok. Bring your own AI subscription to Azure DevOps.",
-    "public": true,
+    "public": false,
     "targets": [
         {
             "id": "Microsoft.VisualStudio.Services"

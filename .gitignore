@@ -4,4 +4,5 @@ packages
 node_modules
 *.vsix
 .env
+*/.env
 

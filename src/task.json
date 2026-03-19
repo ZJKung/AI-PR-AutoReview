@@ -12,8 +12,8 @@
     "author": "PH-Developer",
     "version": {
         "Major": 1,
-        "Minor": 0,
-        "Patch": 1
+        "Minor": 1,
+        "Patch": 3
     },
     "instanceNameFormat": "PR AutoReview-$(inputAiProvider)",
     "inputs": [
@@ -190,6 +190,14 @@
             "defaultValue": "false",
             "required": false,
             "helpMarkDown": "When enabled, only the latest push changes are reviewed instead of all PR changes. Useful for repeated reviews on iteratively updated PRs. Expected savings: 30-90% of tokens depending on number of pushes."
+        },
+        {
+            "name": "inputEnableSuggestionMode",
+            "type": "boolean",
+            "label": "Enable Suggestion Mode",
+            "defaultValue": "false",
+            "required": false,
+            "helpMarkDown": "When enabled, posts inline code suggestions directly on changed lines using GitHub's suggestion format (one-click accept). Only supported for GitHub provider — falls back to a standard review comment for Azure DevOps."
         }
     ],
     "execution": {

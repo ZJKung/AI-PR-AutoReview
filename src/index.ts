@@ -20,6 +20,31 @@ const DEFAULT_SYSTEM_INSTRUCTION = `You are a senior software engineer. Please h
 8. Use Markdown format for the reply.
 9. Assume the provided code snippets are part of a larger, valid codebase. Do not report errors regarding "unresolved symbols," "missing definitions," or "reference issues" that may exist outside the provided diff. Focus your analysis strictly on the logic and quality of the changes themselves.`;
 
+const SUGGESTION_SYSTEM_INSTRUCTION =
+'You are a senior software engineer performing an inline code review.\n\n' +
+'Return ONLY a JSON array wrapped in a ```json code block. No explanation outside the block.\n\n' +
+'Each element MUST have exactly:\n' +
+'- "file": the file path exactly as shown in the prompt\n' +
+'- "line": integer line number from a [L<N>] label in the annotated diff (NEW file lines only)\n' +
+'- "comment": concise English explanation of the issue (1-3 sentences)\n' +
+'- "suggestion": exact replacement source code for that line — no markdown fences\n\n' +
+'Rules:\n' +
+'1. Only suggest changes for bugs, security issues, performance problems, or clear correctness errors.\n' +
+'2. Never target removed lines ([L<N>-removed]) — they no longer exist in the new file.\n' +
+'3. The "line" MUST be taken directly from a [L<N>] label. Never invent line numbers.\n' +
+'4. If nothing is worth suggesting, return: ```json\n[]\n```\n\n' +
+'Example output:\n' +
+'```json\n' +
+'[\n' +
+'  {\n' +
+'    "file": "src/utils.ts",\n' +
+'    "line": 42,\n' +
+'    "comment": "Using == instead of === can cause unexpected type coercion.",\n' +
+'    "suggestion": "  if (value === null) {"\n' +
+'  }\n' +
+']\n' +
+'```';
+
 const ALLOWED_FILE_EXTENSIONS = ['.md', '.txt', '.json', '.yaml', '.yml', '.xml', '.html'];
 
 export class Main {
@@ -184,6 +209,7 @@ export class Main {
         const enableThrottleMode = this.getInputValue('EnableThrottleMode', 'inputEnableThrottleMode', false, 'true').toLowerCase() === 'true';
         const showReviewContent = this.getInputValue('ShowReviewContent', 'inputShowReviewContent', false, 'false').toLowerCase() === 'true';
         const enableIncrementalDiff = this.getInputValue('EnableIncrementalDiff', 'inputEnableIncrementalDiff', false, 'false').toLowerCase() === 'true';
+        const enableSuggestionMode = this.getInputValue('EnableSuggestionMode', 'inputEnableSuggestionMode', false, 'false').toLowerCase() === 'true';
 
         // Get GitHub Copilot timeout (only when provider is GitHubCopilot)
         let timeout: number | undefined = undefined;
@@ -219,7 +245,8 @@ export class Main {
             binaryExtensions,
             enableThrottleMode,
             showReviewContent,
-            enableIncrementalDiff
+            enableIncrementalDiff,
+            enableSuggestionMode
         };
     }
 
@@ -395,6 +422,167 @@ export class Main {
     }
 
     /**
+     * Transform a raw GitHub patch into an LLM-readable line-number-annotated string.
+     * Added/context lines get [L<N>] labels. Removed lines get [L<N>-removed] labels.
+     */
+    private static parsePatchWithLineNumbers(patch: string): string {
+        if (!patch) return '';
+        const lines = patch.split('\n');
+        const result: string[] = [];
+        let newLine = 0;
+        let inHunk = false;
+        const hunkHeaderRegex = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@/;
+
+        for (const line of lines) {
+            const hunkMatch = hunkHeaderRegex.exec(line);
+            if (hunkMatch) {
+                newLine = parseInt(hunkMatch[1], 10);
+                inHunk = true;
+                result.push(line);
+                continue;
+            }
+            if (!inHunk) continue; // skip preamble (diff --git, index, ---, +++ lines)
+            if (line.startsWith('+')) {
+                result.push(`[L${newLine}] ${line}`);
+                newLine++;
+            } else if (line.startsWith('-')) {
+                result.push(`[L${newLine}-removed] ${line}`);
+                // removed lines do not advance the new-file pointer
+            } else {
+                result.push(`[L${newLine}]  ${line}`);
+                newLine++;
+            }
+        }
+        return result.join('\n');
+    }
+
+    /**
+     * Parse the LLM suggestion response, extracting the JSON array from a ```json block.
+     */
+    private parseSuggestionsResponse(rawResponse: string): Array<{
+        file: string; line: number; comment: string; suggestion: string;
+    }> {
+        const match = rawResponse.match(/```json\s*([\s\S]*?)```/);
+        if (!match) {
+            console.warn('⚠️ No ```json block found in LLM suggestion response.');
+            return [];
+        }
+        try {
+            const parsed = JSON.parse(match[1].trim());
+            if (!Array.isArray(parsed)) {
+                console.warn('⚠️ Suggestion response is not a JSON array.');
+                return [];
+            }
+            return parsed.filter(item =>
+                typeof item.file === 'string' &&
+                typeof item.line === 'number' &&
+                typeof item.comment === 'string' &&
+                typeof item.suggestion === 'string'
+            );
+        } catch (e) {
+            console.warn(`⚠️ Failed to parse suggestion JSON: ${e}`);
+            return [];
+        }
+    }
+
+    /**
+     * Generate and post inline code suggestions as GitHub PR review comments.
+     * @param aiProvider - AI provider service instance
+     * @param devOpsService - DevOps service instance (must implement addInlineSuggestionComment)
+     * @param connection - DevOps connection info
+     * @param inputs - Pipeline inputs
+     * @param rawPatches - Map<filePath, rawPatch> from getRawPatches()
+     * @returns Number of suggestions successfully posted
+     */
+    async generateSuggestions(
+        aiProvider: AIProviderService,
+        devOpsService: DevOpsService,
+        connection: DevOpsConnection,
+        inputs: PipelineInputs,
+        rawPatches: Map<string, string>,
+        commitId: string
+    ): Promise<number> {
+        if (!devOpsService.addInlineSuggestionComment) {
+            console.warn('⚠️ Provider does not support inline suggestions. Skipping.');
+            return 0;
+        }
+
+        const aiService = aiProvider.getService(inputs.aiProvider);
+
+        const annotatedBlocks = Array.from(rawPatches.entries())
+            .map(([filePath, patch]) => {
+                const annotated = Main.parsePatchWithLineNumbers(patch);
+                return `\n## File: ${filePath}\n\`\`\`\n${annotated}\n\`\`\``;
+            })
+            .join('\n');
+
+        if (!annotatedBlocks) {
+            console.log('⚠️ No patches available for suggestion mode.');
+            return 0;
+        }
+
+        // Always use SUGGESTION_SYSTEM_INSTRUCTION to protect JSON output format.
+        // If the user supplied a custom system instruction, inject it into the user
+        // prompt instead so it still influences the review without breaking parsing.
+        const customContext = inputs.systemInstruction !== DEFAULT_SYSTEM_INSTRUCTION
+            ? `Additional review guidelines:\n${inputs.systemInstruction}\n\n---\n\n`
+            : '';
+        if (customContext) {
+            console.log('ℹ️ Custom system instruction detected — injected into prompt to preserve JSON output format.');
+        }
+        const prompt = customContext + annotatedBlocks;
+
+        console.log('🤖 Generating inline suggestions...');
+        const aiResponse = await aiService.generateComment(
+            SUGGESTION_SYSTEM_INSTRUCTION,
+            prompt,
+            {
+                maxOutputTokens: inputs.maxOutputTokens,
+                temperature: inputs.temperature,
+                showReviewContent: inputs.showReviewContent
+            }
+        );
+
+        if (aiResponse.inputTokens && aiResponse.outputTokens) {
+            console.log(`💰 Suggestion Token Usage: ${aiResponse.inputTokens + aiResponse.outputTokens} (Input: ${aiResponse.inputTokens}, Output: ${aiResponse.outputTokens})`);
+        }
+
+        console.log('📨 Raw LLM suggestion response:');
+        console.log(aiResponse.content);
+
+        const suggestions = this.parseSuggestionsResponse(aiResponse.content);
+        console.log(`📝 Parsed ${suggestions.length} suggestion(s):`);
+        suggestions.forEach((item, i) => {
+            console.log(`  [${i + 1}] ${item.file}:${item.line} — ${item.comment}`);
+            console.log(`       suggestion: ${item.suggestion}`);
+        });
+        if (suggestions.length === 0) return 0;
+
+        let posted = 0;
+        for (const item of suggestions) {
+            try {
+                console.log(`📌 Posting suggestion on ${item.file}:${item.line}...`);
+                await devOpsService.addInlineSuggestionComment!(
+                    connection.repositoryId,
+                    connection.pullRequestId,
+                    item.file,
+                    item.line,
+                    item.comment,
+                    item.suggestion,
+                    commitId,
+                    connection.projectName
+                );
+                posted++;
+            } catch (err: any) {
+                console.error(`⚠️ Failed to post suggestion on ${item.file}:${item.line} — ${err.message}`);
+            }
+        }
+
+        console.log(`✅ Posted ${posted}/${suggestions.length} inline suggestion(s)`);
+        return posted;
+    }
+
+    /**
      * Add review content as PR comment
      * @param devOpsService - DevOps service instance
      * @param connection - Azure DevOps connection info
@@ -435,6 +623,9 @@ async function run() {
         const inputs = main.getPipelineInputs();
         const connection = main.getDevOpsConnection();
 
+        // Log key feature flags so users can verify they are being read correctly
+        console.log(`⚙️  Feature Flags: ThrottleMode=${inputs.enableThrottleMode} | IncrementalDiff=${inputs.enableIncrementalDiff} | SuggestionMode=${inputs.enableSuggestionMode}`);
+
         // Ensure PR info exists
         if (!connection.pullRequestId) {
             console.log('⚠️ Unable to get Pull Request information. Please ensure this task runs in a PR build.');
@@ -469,17 +660,28 @@ async function run() {
             return;
         }
 
-        // 4. Generate AI analysis
-        const reviewResult = await main.generateAIReview(aiProvider, inputs, changes);
-
-        // 5. Add comment
-        await main.addReviewComment(
-            devOpsService,
-            connection,
-            reviewResult.content,
-            inputs.aiProvider,
-            inputs.modelName
-        );
+        // 4. Generate AI analysis and post comment(s)
+        if (inputs.enableSuggestionMode) {
+            console.log(`💡 Suggestion Mode: ON — detected DevOps provider: ${DevOpsProviderService.detectProvider(connection.collectionUri)}`);
+            if (typeof (devOpsService as any).getRawPatches !== 'function') {
+                console.warn('⚠️ Suggestion mode is only supported for GitHub repositories. Falling back to standard review comment.');
+                const reviewResult = await main.generateAIReview(aiProvider, inputs, changes);
+                await main.addReviewComment(devOpsService, connection, reviewResult.content, inputs.aiProvider, inputs.modelName);
+            } else {
+                const { patches: rawPatches, commitId } = await (devOpsService as any).getRawPatches(
+                    connection.projectName,
+                    connection.repositoryId,
+                    connection.pullRequestId
+                );
+                const postedCount = await main.generateSuggestions(aiProvider, devOpsService, connection, inputs, rawPatches, commitId);
+                if (postedCount === 0) {
+                    console.log('ℹ️ No suggestions were posted.');
+                }
+            }
+        } else {
+            const reviewResult = await main.generateAIReview(aiProvider, inputs, changes);
+            await main.addReviewComment(devOpsService, connection, reviewResult.content, inputs.aiProvider, inputs.modelName);
+        }
         console.log('🎉 AI Pull Request Code Review completed successfully!');
         tl.setResult(tl.TaskResult.Succeeded, 'AI Code Review completed successfully');
 

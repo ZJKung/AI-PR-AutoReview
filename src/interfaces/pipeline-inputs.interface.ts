@@ -34,6 +34,8 @@ export interface PipelineInputs {
     showReviewContent: boolean;
     /** Enable incremental diff mode (default false: all PR changes; true: latest push only) */
     enableIncrementalDiff: boolean;
+    /** Enable suggestion mode (default false; true posts inline GitHub suggestions instead of single PR comment) */
+    enableSuggestionMode: boolean;
 }
 
 /**

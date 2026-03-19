@@ -18,6 +18,7 @@ This is an Azure DevOps Pipeline extension that leverages the power of Large Lan
 + **Universal AI Support**: Seamlessly switch between Google Gemini, OpenAI, Grok, Claude, GitHub Copilot, or any OpenAI-compatible endpoint.
 + **GitHub Copilot Integration**: Connect to GitHub Copilot CLI to perform reviews using your existing subscription (Individual, Business, or Enterprise), ensuring data privacy and cost-efficiency.
 + **Direct Feedback**: Publishes AI review suggestions directly to the PR as comments, threading into the conversation.
++ **Inline Suggestion Mode** *(GitHub PRs)*: Posts actionable code suggestions directly on changed lines using GitHub's native suggestion format — reviewers can accept fixes with a single click.
 + **Highly Customizable**: Tailor the System Prompts (Inline or File-based), adjust creativity (Temperature), and control token usage.
 + **Smart Filtering**: configure included/excluded file extensions to focus the review on what matters.
 
@@ -150,6 +151,7 @@ These fields are only visible when AI Provider is set to **GitHub Copilot**.
 | Enable AI Throttle Mode           | boolean |    No    | true    | When enabled, only code diffs are sent. When disabled, the entire new file content is sent.                     |
 | Enable Incremental Diff Mode      | boolean |    No    | false   | When enabled, only the latest push changes are reviewed (requires Throttle Mode).                               |
 | Show Review Content               | boolean |    No    | true    | Print the prompt and AI response to the console for debugging.                                                  |
+| Enable Suggestion Mode            | boolean |    No    | false   | When enabled, posts inline code suggestions on changed lines using GitHub's native suggestion format (one-click accept). **GitHub provider only** — falls back to a standard review comment for Azure DevOps. |
 
 
 ## 🎉 Result display

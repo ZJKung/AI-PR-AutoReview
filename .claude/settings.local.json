@@ -7,7 +7,9 @@
       "Bash(npx ts-node:*)",
       "Bash(git add:*)",
       "WebFetch(domain:github.com)",
-      "Bash(openspec list:*)"
+      "Bash(openspec list:*)",
+      "Bash(npm run:*)",
+      "Bash(ls C:UsersLi-ChiehKunggitdevAI-PR-AutoReview/*.md)"
     ]
   }
 }

@@ -39,6 +39,7 @@ interface TestOptions {
     enableIncrementalDiff: boolean;
     enableThrottleMode: boolean;
     showReviewContent: boolean;
+    enableSuggestionMode: boolean;
 }
 
 class PRReviewTester {
@@ -59,6 +60,7 @@ class PRReviewTester {
             enableIncrementalDiff: false,
             enableThrottleMode: true,
             showReviewContent: true,
+            enableSuggestionMode: false,
             aiProvider: 'claude',
             modelName: 'claude-haiku-4-5',
             apiKey: ''
@@ -152,6 +154,11 @@ class PRReviewTester {
                 // Enable verbose log output
                 case '--verbose':
                     options.showReviewContent = value.toLowerCase() === 'true';
+                    i++;
+                    break;
+                // Enable inline suggestion mode (GitHub only)
+                case '--suggestion':
+                    options.enableSuggestionMode = value.toLowerCase() === 'true';
                     i++;
                     break;
                 // Show help message
@@ -255,8 +262,9 @@ AI Provider Options:
 
 Feature Flags:
   --throttle <true|false>      Enable throttle mode (default: true, diff only)
-  --incremental <true|false>  Enable incremental diff (default: false)
-  --verbose <true|false>     Show verbose logs (default: true)
+  --incremental <true|false>   Enable incremental diff (default: false)
+  --verbose <true|false>       Show verbose logs (default: true)
+  --suggestion <true|false>    Enable inline suggestion mode (GitHub only, default: false)
 
 Examples:
   # Azure DevOps with Claude
@@ -348,7 +356,8 @@ Examples:
                 binaryExtensions: [],
                 showReviewContent: this.options.showReviewContent,
                 enableThrottleMode: this.options.enableThrottleMode,
-                enableIncrementalDiff: this.options.enableIncrementalDiff
+                enableIncrementalDiff: this.options.enableIncrementalDiff,
+                enableSuggestionMode: this.options.enableSuggestionMode
             };
 
             // Get PR changes
@@ -374,16 +383,49 @@ Examples:
 
             console.log(`✅ Found ${changes.length} file change(s)`);
 
-            // Generate AI review
+            // Generate AI review / suggestions
             console.log('\n🤖 Generating AI review...');
-            const reviewContent = await (this.main as any).generateAIReview(aiProvider, inputs, changes);
 
-            // Print results
-            console.log('\n' + '='.repeat(80));
-            console.log('📄 Review Result');
-            console.log('='.repeat(80));
-            console.log(reviewContent);
-            console.log('='.repeat(80));
+            if (this.options.enableSuggestionMode) {
+                if (typeof (devOpsService as any).getRawPatches !== 'function') {
+                    console.warn('⚠️ Suggestion mode is only supported for GitHub provider. Falling back to standard review.');
+                    const reviewResult = await (this.main as any).generateAIReview(aiProvider, inputs, changes);
+                    console.log('\n' + '='.repeat(80));
+                    console.log('📄 Review Result (fallback)');
+                    console.log('='.repeat(80));
+                    console.log(reviewResult.content);
+                    console.log('='.repeat(80));
+                } else {
+                    const connection = {
+                        accessToken: this.options.accessToken!,
+                        collectionUri: this.options.organizationUrl || this.options.owner || '',
+                        projectName: this.options.projectName || this.options.owner || 'default',
+                        repositoryId,
+                        pullRequestId: this.options.prId
+                    };
+                    const { patches: rawPatches, commitId } = await (devOpsService as any).getRawPatches(
+                        connection.projectName,
+                        repositoryId,
+                        this.options.prId
+                    );
+                    const postedCount = await (this.main as any).generateSuggestions(
+                        aiProvider,
+                        devOpsService,
+                        connection,
+                        inputs,
+                        rawPatches,
+                        commitId
+                    );
+                    console.log(`\n✅ Posted ${postedCount} inline suggestion(s)`);
+                }
+            } else {
+                const reviewResult = await (this.main as any).generateAIReview(aiProvider, inputs, changes);
+                console.log('\n' + '='.repeat(80));
+                console.log('📄 Review Result');
+                console.log('='.repeat(80));
+                console.log(reviewResult.content);
+                console.log('='.repeat(80));
+            }
 
             console.log('\n✅ Test completed!');
             process.exit(0);
@@ -411,6 +453,7 @@ Examples:
         console.log(`  • Throttle Mode: ${this.options.enableThrottleMode ? '✓ Enabled' : '✗ Disabled'}`);
         console.log(`  • Incremental Diff: ${this.options.enableIncrementalDiff ? '✓ Enabled' : '✗ Disabled'}`);
         console.log(`  • Verbose Output: ${this.options.showReviewContent ? '✓ Enabled' : '✗ Disabled'}`);
+        console.log(`  • Suggestion Mode: ${this.options.enableSuggestionMode ? '✓ Enabled' : '✗ Disabled'}`);
     }
 }
 

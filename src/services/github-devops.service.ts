@@ -90,6 +90,79 @@ export class GitHubDevOpsService extends BaseDevOpsService {
     }
 
     /**
+     * Post an inline review comment with a GitHub suggestion block on a specific line.
+     * Uses the Pulls API (not Issues API) because only that API supports inline comments.
+     * @param repositoryId - owner/repo format
+     * @param pullRequestId - PR number
+     * @param filePath - Path to the file in the repository
+     * @param line - Line number in the new file version (RIGHT side)
+     * @param comment - Human-readable explanation prepended before the suggestion block
+     * @param suggestion - Replacement code placed inside the suggestion fence
+     * @returns Comment ID
+     */
+    public async addInlineSuggestionComment(
+        repositoryId: string,
+        pullRequestId: number,
+        filePath: string,
+        line: number,
+        comment: string,
+        suggestion: string,
+        commitId: string,
+        _projectName?: string
+    ): Promise<number> {
+        const { owner, repo } = this.parseOwnerRepo(repositoryId);
+        const body = `${comment}\n\n\`\`\`suggestion\n${suggestion}\n\`\`\``;
+
+        const res = await this.client.rest.pulls.createReviewComment({
+            owner,
+            repo,
+            pull_number: pullRequestId,
+            body,
+            commit_id: commitId,
+            path: filePath,
+            line,
+            side: 'RIGHT'
+        });
+
+        if (!res?.data?.id) {
+            throw new Error(`⛔ Failed to create inline suggestion on ${filePath}:${line}`);
+        }
+        const commentId = Number(res.data.id as any);
+        console.log(`✅ Added inline suggestion on ${filePath}:${line}, ID: ${commentId}`);
+        return commentId;
+    }
+
+    /**
+     * Fetch raw patch strings for all changed (non-removed) files in a PR.
+     * @param _projectName - Unused for GitHub
+     * @param repositoryId - owner/repo format
+     * @param pullRequestId - PR number
+     * @returns Map<filePath, rawPatch>
+     */
+    public async getRawPatches(
+        _projectName: string,
+        repositoryId: string,
+        pullRequestId: number
+    ): Promise<{ patches: Map<string, string>; commitId: string }> {
+        const { owner, repo } = this.parseOwnerRepo(repositoryId);
+
+        const prInfo = await this.client.rest.pulls.get({ owner, repo, pull_number: pullRequestId });
+        const commitId = prInfo.data.head?.sha ?? '';
+
+        const files = await this.client.paginate(
+            this.client.rest.pulls.listFiles,
+            { owner, repo, pull_number: pullRequestId }
+        );
+        const patches = new Map<string, string>();
+        for (const f of files as any[]) {
+            if (f.patch && f.status !== 'removed') {
+                patches.set(f.filename, f.patch);
+            }
+        }
+        return { patches, commitId };
+    }
+
+    /**
      * Get changed files and content for a Pull Request
      * @param projectName - Project name (unused for GitHub)
      * @param repositoryId - owner/repo format

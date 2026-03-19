@@ -177,6 +177,134 @@ export class AzureDevOpsService extends BaseDevOpsService {
         return changeDetails;
     }
 
+    /**
+     * Post an inline suggestion comment on a specific line of a PR file.
+     * Azure DevOps does not support GitHub's click-to-accept suggestion format,
+     * so the suggestion is formatted as a markdown code block instead.
+     * @param repositoryId - Repository ID
+     * @param pullRequestId - Pull Request ID
+     * @param filePath - File path within the repository
+     * @param line - Target line number in the new file version
+     * @param comment - Explanation text shown above the suggestion
+     * @param suggestion - Replacement source code shown in a code block
+     * @param _commitId - Unused for Azure DevOps (required by interface)
+     * @param projectName - Project name
+     * @returns Comment thread ID
+     */
+    public async addInlineSuggestionComment(
+        repositoryId: string,
+        pullRequestId: number,
+        filePath: string,
+        line: number,
+        comment: string,
+        suggestion: string,
+        _commitId: string,
+        projectName?: string
+    ): Promise<number> {
+        const gitApi = await this.getGitApi();
+
+        // Azure DevOps file paths in threadContext must start with /
+        const normalizedPath = filePath.startsWith('/') ? filePath : `/${filePath}`;
+
+        const body = `${comment}\n\n**Suggested change:**\n\`\`\`\n${suggestion}\n\`\`\``;
+
+        const thread = await gitApi.createThread(
+            {
+                comments: [{
+                    parentCommentId: 0,
+                    content: body,
+                    commentType: 1 // CommentType.text = 1
+                }],
+                status: 1, // CommentThreadStatus.active = 1
+                threadContext: {
+                    filePath: normalizedPath,
+                    rightFileStart: { line, offset: 1 },
+                    rightFileEnd: { line, offset: 1 }
+                }
+            },
+            repositoryId,
+            pullRequestId,
+            projectName || ''
+        );
+
+        if (!thread || !thread.id) {
+            throw new Error(`⛔ Failed to create inline suggestion thread on ${filePath}:${line}`);
+        }
+
+        console.log(`✅ Added inline suggestion on ${filePath}:${line}, thread ID: ${thread.id}`);
+        return thread.id;
+    }
+
+    /**
+     * Fetch raw patch strings for all changed (non-removed) files in a PR.
+     * Uses git diff to produce unified diff output without post-processing.
+     * @param projectName - Project name
+     * @param repositoryId - Repository ID
+     * @param pullRequestId - Pull Request ID
+     * @returns Map<filePath, rawPatch> and a dummy commitId (empty string for Azure DevOps)
+     */
+    public async getRawPatches(
+        projectName: string,
+        repositoryId: string,
+        pullRequestId: number
+    ): Promise<{ patches: Map<string, string>; commitId: string }> {
+        const gitApi = await this.getGitApi();
+
+        const pr = await gitApi.getPullRequest(repositoryId, pullRequestId, projectName);
+        if (!pr || !pr.lastMergeSourceCommit || !pr.lastMergeTargetCommit) {
+            throw new Error('⛔ Unable to get Pull Request information for raw patches');
+        }
+
+        const iterations = await gitApi.getPullRequestIterations(repositoryId, pullRequestId, projectName);
+        if (!iterations || iterations.length === 0) {
+            return { patches: new Map(), commitId: '' };
+        }
+
+        const targetIteration = iterations[iterations.length - 1];
+        if (!targetIteration || targetIteration.id === undefined) {
+            return { patches: new Map(), commitId: '' };
+        }
+
+        const changes = await gitApi.getPullRequestIterationChanges(
+            repositoryId,
+            pullRequestId,
+            targetIteration.id
+        );
+
+        if (!changes.changeEntries || changes.changeEntries.length === 0) {
+            return { patches: new Map(), commitId: '' };
+        }
+
+        const patches = new Map<string, string>();
+
+        for (const change of changes.changeEntries) {
+            if (!change.item?.path || !change.item?.objectId) continue;
+            if (change.changeType === 8 /* Delete */) continue; // skip deleted files
+
+            const filePath = change.item.path;
+
+            try {
+                const newContent = await this.getFileContent(gitApi, repositoryId, projectName, change.item.objectId);
+                let oldContent = '';
+
+                if (change.item.originalObjectId) {
+                    oldContent = await this.getFileContent(gitApi, repositoryId, projectName, change.item.originalObjectId);
+                }
+
+                if (oldContent || newContent) {
+                    const rawDiff = await this.getRawDiffOutput(newContent, oldContent);
+                    if (rawDiff) {
+                        patches.set(filePath, rawDiff);
+                    }
+                }
+            } catch (err) {
+                console.warn(`⚠️ Could not get raw diff for ${filePath}: ${err}`);
+            }
+        }
+
+        return { patches, commitId: '' };
+    }
+
     //#region Private Methods
 
     /**
@@ -580,6 +708,41 @@ export class AzureDevOpsService extends BaseDevOpsService {
             }
         } finally {
             // Clean up temp files
+            await Promise.all([
+                fs.unlink(oldFile).catch(() => { }),
+                fs.unlink(newFile).catch(() => { })
+            ]);
+        }
+    }
+
+    /**
+     * Use git diff to get raw file differences without post-processing.
+     * Unlike getDiffContent, this returns the raw unified diff output needed
+     * by parsePatchWithLineNumbers for suggestion mode.
+     * @param newContent - New content
+     * @param oldContent - Old content
+     * @returns Raw diff output
+     */
+    private async getRawDiffOutput(newContent: string, oldContent: string): Promise<string> {
+        const tempPath = os.tmpdir();
+        const randomId = Math.random().toString(36).substring(2, 15);
+        const oldFile = path.join(tempPath, `old-${randomId}.tmp`);
+        const newFile = path.join(tempPath, `new-${randomId}.tmp`);
+
+        try {
+            await fs.writeFile(oldFile, oldContent);
+            await fs.writeFile(newFile, newContent);
+
+            try {
+                const { stdout } = await this.execAsync(`git diff --no-index "${oldFile}" "${newFile}"`);
+                return stdout;
+            } catch (error: any) {
+                if (error.code === 1 && error.stdout) {
+                    return error.stdout;
+                }
+                throw new Error(`⛔ Error in git diff (raw): ${error.message}`);
+            }
+        } finally {
             await Promise.all([
                 fs.unlink(oldFile).catch(() => { }),
                 fs.unlink(newFile).catch(() => { })

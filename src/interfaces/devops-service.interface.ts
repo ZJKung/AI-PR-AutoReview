@@ -62,4 +62,25 @@ export interface DevOpsService {
         enableThrottleMode?: boolean,
         enableIncrementalDiff?: boolean
     ): Promise<FileChangeDetail[] | null>;
+
+    /**
+     * Post an inline suggestion comment on a specific line. Optional — GitHub only.
+     * @param repositoryId - Repository ID or owner/repo
+     * @param pullRequestId - Pull Request ID
+     * @param filePath - File path within the repository
+     * @param line - Target line number in the new file version
+     * @param comment - Explanation text shown before the suggestion
+     * @param suggestion - Replacement source code for the suggestion block
+     * @returns Comment ID
+     */
+    addInlineSuggestionComment?(
+        repositoryId: string,
+        pullRequestId: number,
+        filePath: string,
+        line: number,
+        comment: string,
+        suggestion: string,
+        commitId: string,
+        projectName?: string
+    ): Promise<number>;
 }

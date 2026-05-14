@@ -661,12 +661,15 @@ async function run() {
         }
 
         // 4. Generate AI analysis and post comment(s)
+        // Always post the summary review comment.
+        const reviewResult = await main.generateAIReview(aiProvider, inputs, changes);
+        await main.addReviewComment(devOpsService, connection, reviewResult.content, inputs.aiProvider, inputs.modelName);
+
+        // If suggestion mode is on AND the provider supports inline suggestions, also post inline suggestions.
         if (inputs.enableSuggestionMode) {
             console.log(`💡 Suggestion Mode: ON — detected DevOps provider: ${DevOpsProviderService.detectProvider(connection.collectionUri)}`);
             if (typeof (devOpsService as any).getRawPatches !== 'function') {
-                console.warn('⚠️ Suggestion mode is only supported for GitHub repositories. Falling back to standard review comment.');
-                const reviewResult = await main.generateAIReview(aiProvider, inputs, changes);
-                await main.addReviewComment(devOpsService, connection, reviewResult.content, inputs.aiProvider, inputs.modelName);
+                console.warn('⚠️ Suggestion mode is only supported for GitHub repositories. Skipping inline suggestions.');
             } else {
                 const { patches: rawPatches, commitId } = await (devOpsService as any).getRawPatches(
                     connection.projectName,
@@ -678,9 +681,6 @@ async function run() {
                     console.log('ℹ️ No suggestions were posted.');
                 }
             }
-        } else {
-            const reviewResult = await main.generateAIReview(aiProvider, inputs, changes);
-            await main.addReviewComment(devOpsService, connection, reviewResult.content, inputs.aiProvider, inputs.modelName);
         }
         console.log('🎉 AI Pull Request Code Review completed successfully!');
         tl.setResult(tl.TaskResult.Succeeded, 'AI Code Review completed successfully');

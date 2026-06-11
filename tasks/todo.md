@@ -9,7 +9,7 @@
 
 ## Phase 2 — Azure DevOps Inline Comments
 - [x] Task 3: Verify + finish ADO inline flow, optional suggestion, path normalization, gate warning fixed (M) — done 2026-06-11, 6 unit tests; ⚠️ manual line-anchor check on a real ADO test PR still pending
-- [ ] Task 4: Shared severity-aware thread formatter for ADO + GitHub (S)
+- [x] Task 4: Shared severity-aware thread formatter for ADO + GitHub (S) — done 2026-06-11, 3 unit tests
 - [ ] **Checkpoint B:** both providers show correct severity-tagged inline comments on test PRs
 
 ## Phase 3 — Updatable Walkthrough Summary

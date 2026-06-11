@@ -9,6 +9,7 @@ import { DevOpsProviderService } from './services/devops-provider.service';
 import { DevOpsService } from './interfaces/devops-service.interface';
 import { ReviewFinding, ReviewFindingSeverity, REVIEW_FINDING_SEVERITIES } from './interfaces/review-finding.interface';
 import { FINDINGS_SYSTEM_INSTRUCTION, parseFindingsResponse, filterFindings } from './services/finding-parser';
+import { formatFindingComment } from './services/finding-formatter';
 
 
 const DEFAULT_SYSTEM_INSTRUCTION = `You are a senior software engineer. Please help complete the PR code review and respond according to the following instructions.
@@ -533,7 +534,7 @@ export class Main {
                     connection.pullRequestId,
                     item.file,
                     item.line,
-                    item.finding,
+                    formatFindingComment(item),
                     item.suggestion,
                     commitId,
                     connection.projectName

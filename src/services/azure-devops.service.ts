@@ -11,7 +11,7 @@ import * as fs from 'fs/promises';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { BaseDevOpsService } from './base-devops.service';
-import { FileChangeDetail } from '../interfaces/devops-service.interface';
+import { FileChangeDetail, ExistingComment } from '../interfaces/devops-service.interface';
 
 /**
  * Azure DevOps API service class
@@ -235,6 +235,63 @@ export class AzureDevOpsService extends BaseDevOpsService {
 
         console.log(`✅ Added inline suggestion on ${filePath}:${line}, thread ID: ${thread.id}`);
         return thread.id;
+    }
+
+    /**
+     * Find an existing bot comment thread on the PR carrying the given hidden marker.
+     * @param projectName - Project name
+     * @param repositoryId - Repository ID
+     * @param pullRequestId - Pull Request ID
+     * @param marker - Hidden HTML marker identifying the bot comment
+     * @returns Handle to the comment, or null when not found
+     */
+    public async findBotComment(
+        projectName: string,
+        repositoryId: string,
+        pullRequestId: number,
+        marker: string
+    ): Promise<ExistingComment | null> {
+        const gitApi = await this.getGitApi();
+        const threads = await gitApi.getThreads(repositoryId, pullRequestId, projectName);
+
+        for (const thread of threads ?? []) {
+            if (thread.isDeleted || !thread.id || !thread.comments?.length) continue;
+            const first = thread.comments[0];
+            if (first.id && typeof first.content === 'string' && first.content.includes(marker)) {
+                return { threadId: thread.id, commentId: first.id };
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Replace the content of an existing PR comment in place.
+     * @param projectName - Project name
+     * @param repositoryId - Repository ID
+     * @param pullRequestId - Pull Request ID
+     * @param comment - Handle returned by findBotComment
+     * @param content - New comment content
+     */
+    public async updatePullRequestComment(
+        projectName: string,
+        repositoryId: string,
+        pullRequestId: number,
+        comment: ExistingComment,
+        content: string
+    ): Promise<void> {
+        if (comment.threadId === undefined) {
+            throw new Error('⛔ Azure DevOps comment update requires a thread ID');
+        }
+        const gitApi = await this.getGitApi();
+        await gitApi.updateComment(
+            { content },
+            repositoryId,
+            pullRequestId,
+            comment.threadId,
+            comment.commentId,
+            projectName
+        );
+        console.log(`✅ Updated comment in thread ${comment.threadId}`);
     }
 
     /**

@@ -13,7 +13,7 @@
 - [ ] **Checkpoint B:** both providers show correct severity-tagged inline comments on test PRs
 
 ## Phase 3 — Updatable Walkthrough Summary
-- [ ] Task 5: `findBotComment` + `updatePullRequestComment` in both providers (M) — *parallel-safe with Phase 2*
+- [x] Task 5: `findBotComment` + `updatePullRequestComment` in both providers (M) — done 2026-06-11, 7 unit tests
 - [ ] Task 6: Walkthrough prompt (status + file table) with upsert via hidden marker; upsert default-on when suggestion mode enabled (M)
 - [ ] **Checkpoint C:** repeated runs edit one summary comment, never stack
 

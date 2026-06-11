@@ -21,6 +21,16 @@ export interface FileChangeDetail {
 }
 
 /**
+ * Handle to an existing PR comment posted by the bot.
+ */
+export interface ExistingComment {
+    /** Comment ID (GitHub) or comment ID within the thread (Azure DevOps) */
+    commentId: number;
+    /** Thread ID containing the comment (Azure DevOps only) */
+    threadId?: number;
+}
+
+/**
  * DevOps service interface
  * Defines methods that all DevOps providers (Azure DevOps, GitHub) must implement
  */
@@ -83,4 +93,35 @@ export interface DevOpsService {
         commitId: string,
         projectName?: string
     ): Promise<number>;
+
+    /**
+     * Find an existing bot comment on the PR carrying the given hidden marker.
+     * @param projectName - Project name (may be unused for GitHub)
+     * @param repositoryId - Repository ID or owner/repo
+     * @param pullRequestId - Pull Request ID
+     * @param marker - Hidden HTML marker identifying the bot comment
+     * @returns Handle to the comment, or null when not found
+     */
+    findBotComment?(
+        projectName: string,
+        repositoryId: string,
+        pullRequestId: number,
+        marker: string
+    ): Promise<ExistingComment | null>;
+
+    /**
+     * Replace the content of an existing PR comment in place.
+     * @param projectName - Project name (may be unused for GitHub)
+     * @param repositoryId - Repository ID or owner/repo
+     * @param pullRequestId - Pull Request ID
+     * @param comment - Handle returned by findBotComment
+     * @param content - New comment content
+     */
+    updatePullRequestComment?(
+        projectName: string,
+        repositoryId: string,
+        pullRequestId: number,
+        comment: ExistingComment,
+        content: string
+    ): Promise<void>;
 }

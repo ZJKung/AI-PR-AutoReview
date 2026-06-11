@@ -1,7 +1,7 @@
 import { Octokit } from '@octokit/rest';
 import path from 'path';
 import { BaseDevOpsService } from './base-devops.service';
-import { FileChangeDetail } from '../interfaces/devops-service.interface';
+import { FileChangeDetail, ExistingComment } from '../interfaces/devops-service.interface';
 
 /**
  * GitHub service class
@@ -87,6 +87,61 @@ export class GitHubDevOpsService extends BaseDevOpsService {
         const commentId = Number(res.data.id as any);
         this.logAddCommentSuccess(commentId);
         return commentId;
+    }
+
+    /**
+     * Find an existing bot comment on the PR carrying the given hidden marker.
+     * @param _projectName - Unused for GitHub
+     * @param repositoryId - owner/repo format
+     * @param pullRequestId - PR number
+     * @param marker - Hidden HTML marker identifying the bot comment
+     * @returns Handle to the comment, or null when not found
+     */
+    public async findBotComment(
+        _projectName: string,
+        repositoryId: string,
+        pullRequestId: number,
+        marker: string
+    ): Promise<ExistingComment | null> {
+        const { owner, repo } = this.parseOwnerRepo(repositoryId);
+        const res = await this.client.rest.issues.listComments({
+            owner,
+            repo,
+            issue_number: pullRequestId,
+            per_page: 100
+        });
+
+        for (const comment of res.data ?? []) {
+            if (comment.id && typeof comment.body === 'string' && comment.body.includes(marker)) {
+                return { commentId: Number(comment.id) };
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Replace the content of an existing PR comment in place.
+     * @param _projectName - Unused for GitHub
+     * @param repositoryId - owner/repo format
+     * @param pullRequestId - PR number (unused; comment ID is global)
+     * @param comment - Handle returned by findBotComment
+     * @param content - New comment content
+     */
+    public async updatePullRequestComment(
+        _projectName: string,
+        repositoryId: string,
+        pullRequestId: number,
+        comment: ExistingComment,
+        content: string
+    ): Promise<void> {
+        const { owner, repo } = this.parseOwnerRepo(repositoryId);
+        await this.client.rest.issues.updateComment({
+            owner,
+            repo,
+            comment_id: comment.commentId,
+            body: content
+        });
+        console.log(`✅ Updated comment ${comment.commentId}`);
     }
 
     /**

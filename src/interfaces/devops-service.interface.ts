@@ -64,13 +64,13 @@ export interface DevOpsService {
     ): Promise<FileChangeDetail[] | null>;
 
     /**
-     * Post an inline suggestion comment on a specific line. Optional — GitHub only.
+     * Post an inline finding comment on a specific line, optionally with a suggested fix.
      * @param repositoryId - Repository ID or owner/repo
      * @param pullRequestId - Pull Request ID
      * @param filePath - File path within the repository
      * @param line - Target line number in the new file version
      * @param comment - Explanation text shown before the suggestion
-     * @param suggestion - Replacement source code for the suggestion block
+     * @param suggestion - Replacement source code for the suggestion block; undefined posts a plain comment
      * @returns Comment ID
      */
     addInlineSuggestionComment?(
@@ -79,7 +79,7 @@ export interface DevOpsService {
         filePath: string,
         line: number,
         comment: string,
-        suggestion: string,
+        suggestion: string | undefined,
         commitId: string,
         projectName?: string
     ): Promise<number>;

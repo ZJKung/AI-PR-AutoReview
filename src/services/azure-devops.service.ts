@@ -186,7 +186,7 @@ export class AzureDevOpsService extends BaseDevOpsService {
      * @param filePath - File path within the repository
      * @param line - Target line number in the new file version
      * @param comment - Explanation text shown above the suggestion
-     * @param suggestion - Replacement source code shown in a code block
+     * @param suggestion - Replacement source code shown in a code block; undefined posts the comment alone
      * @param _commitId - Unused for Azure DevOps (required by interface)
      * @param projectName - Project name
      * @returns Comment thread ID
@@ -197,7 +197,7 @@ export class AzureDevOpsService extends BaseDevOpsService {
         filePath: string,
         line: number,
         comment: string,
-        suggestion: string,
+        suggestion: string | undefined,
         _commitId: string,
         projectName?: string
     ): Promise<number> {
@@ -206,7 +206,9 @@ export class AzureDevOpsService extends BaseDevOpsService {
         // Azure DevOps file paths in threadContext must start with /
         const normalizedPath = filePath.startsWith('/') ? filePath : `/${filePath}`;
 
-        const body = `${comment}\n\n**Suggested change:**\n\`\`\`\n${suggestion}\n\`\`\``;
+        const body = suggestion !== undefined
+            ? `${comment}\n\n**Suggested change:**\n\`\`\`\n${suggestion}\n\`\`\``
+            : comment;
 
         const thread = await gitApi.createThread(
             {

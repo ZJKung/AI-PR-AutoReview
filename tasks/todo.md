@@ -8,7 +8,7 @@
 - [ ] **Checkpoint A:** typecheck + tests clean; `devscripts:ai` emits typed filtered findings; schema frozen after human review
 
 ## Phase 2 — Azure DevOps Inline Comments
-- [ ] Task 3: Verify + finish ADO inline flow (existing `azure-devops.service.ts:194/:246`), fix gate warning, line-anchor matrix (M)
+- [x] Task 3: Verify + finish ADO inline flow, optional suggestion, path normalization, gate warning fixed (M) — done 2026-06-11, 6 unit tests; ⚠️ manual line-anchor check on a real ADO test PR still pending
 - [ ] Task 4: Shared severity-aware thread formatter for ADO + GitHub (S)
 - [ ] **Checkpoint B:** both providers show correct severity-tagged inline comments on test PRs
 

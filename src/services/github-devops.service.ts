@@ -97,7 +97,7 @@ export class GitHubDevOpsService extends BaseDevOpsService {
      * @param filePath - Path to the file in the repository
      * @param line - Line number in the new file version (RIGHT side)
      * @param comment - Human-readable explanation prepended before the suggestion block
-     * @param suggestion - Replacement code placed inside the suggestion fence
+     * @param suggestion - Replacement code placed inside the suggestion fence; undefined posts the comment alone
      * @returns Comment ID
      */
     public async addInlineSuggestionComment(
@@ -106,12 +106,17 @@ export class GitHubDevOpsService extends BaseDevOpsService {
         filePath: string,
         line: number,
         comment: string,
-        suggestion: string,
+        suggestion: string | undefined,
         commitId: string,
         _projectName?: string
     ): Promise<number> {
         const { owner, repo } = this.parseOwnerRepo(repositoryId);
-        const body = `${comment}\n\n\`\`\`suggestion\n${suggestion}\n\`\`\``;
+        const body = suggestion !== undefined
+            ? `${comment}\n\n\`\`\`suggestion\n${suggestion}\n\`\`\``
+            : comment;
+
+        // GitHub review comment paths are repository-relative without a leading slash
+        const normalizedPath = filePath.startsWith('/') ? filePath.slice(1) : filePath;
 
         const res = await this.client.rest.pulls.createReviewComment({
             owner,
@@ -119,7 +124,7 @@ export class GitHubDevOpsService extends BaseDevOpsService {
             pull_number: pullRequestId,
             body,
             commit_id: commitId,
-            path: filePath,
+            path: normalizedPath,
             line,
             side: 'RIGHT'
         });

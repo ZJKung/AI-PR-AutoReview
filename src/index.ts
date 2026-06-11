@@ -526,14 +526,8 @@ export class Main {
 
         let posted = 0;
         for (const item of findings) {
-            // Findings without a mechanical fix cannot be posted as inline suggestions yet;
-            // plain inline comment support arrives with the Azure DevOps inline flow.
-            if (item.suggestion === undefined) {
-                console.log(`ℹ️ Skipping finding without suggestion on ${item.file}:${item.line} (not yet postable inline).`);
-                continue;
-            }
             try {
-                console.log(`📌 Posting suggestion on ${item.file}:${item.line}...`);
+                console.log(`📌 Posting finding on ${item.file}:${item.line}...`);
                 await devOpsService.addInlineSuggestionComment!(
                     connection.repositoryId,
                     connection.pullRequestId,
@@ -546,11 +540,11 @@ export class Main {
                 );
                 posted++;
             } catch (err: any) {
-                console.error(`⚠️ Failed to post suggestion on ${item.file}:${item.line} — ${err.message}`);
+                console.error(`⚠️ Failed to post finding on ${item.file}:${item.line} — ${err.message}`);
             }
         }
 
-        console.log(`✅ Posted ${posted}/${findings.length} inline suggestion(s)`);
+        console.log(`✅ Posted ${posted}/${findings.length} inline finding(s)`);
         return posted;
     }
 
@@ -641,7 +635,7 @@ async function run() {
         if (inputs.enableSuggestionMode) {
             console.log(`💡 Suggestion Mode: ON — detected DevOps provider: ${DevOpsProviderService.detectProvider(connection.collectionUri)}`);
             if (typeof (devOpsService as any).getRawPatches !== 'function') {
-                console.warn('⚠️ Suggestion mode is only supported for GitHub repositories. Skipping inline suggestions.');
+                console.warn('⚠️ Current DevOps provider does not support inline findings (no raw patch support). Skipping.');
             } else {
                 const { patches: rawPatches, commitId } = await (devOpsService as any).getRawPatches(
                     connection.projectName,

@@ -11,6 +11,7 @@ import { ReviewFinding, ReviewFindingSeverity, REVIEW_FINDING_SEVERITIES } from 
 import { FINDINGS_SYSTEM_INSTRUCTION, parseFindingsResponse, filterFindings } from './services/finding-parser';
 import { formatFindingComment } from './services/finding-formatter';
 import { computeFindingFingerprint, fingerprintMarker, extractFingerprints, selectNewFindings, selectResolvedThreads } from './services/finding-state';
+import { loadRepoConfig, applyRepoConfig, filterPathsByGlobs, instructionsForFiles } from './services/repo-config.service';
 
 
 /** Hidden marker identifying the bot's summary comment for upsert */
@@ -665,8 +666,17 @@ async function run() {
         console.log(`🚀 Starting AI Pull Request Code Review Task... (Debug Mode: ${isDebugMode ? 'ON' : 'OFF'})`);
 
         // 1. Get inputs
-        const inputs = main.getPipelineInputs();
+        let inputs = main.getPipelineInputs();
         const connection = main.getDevOpsConnection();
+
+        // Per-repo config (.aireview.yml at the repo root) overrides task inputs
+        const repoRoot = isDebugMode
+            ? (process.env.RepoRoot ?? process.cwd())
+            : (tl.getVariable('Build.SourcesDirectory') ?? '');
+        const repoConfig = repoRoot ? loadRepoConfig(repoRoot) : null;
+        if (repoConfig) {
+            inputs = applyRepoConfig(inputs, repoConfig);
+        }
 
         // Log key feature flags so users can verify they are being read correctly
         console.log(`⚙️  Feature Flags: ThrottleMode=${inputs.enableThrottleMode} | IncrementalDiff=${inputs.enableIncrementalDiff} | SuggestionMode=${inputs.enableSuggestionMode}`);
@@ -698,11 +708,29 @@ async function run() {
         const devOpsService = devOpsProvider.getService(provider);
 
         // 3. Get PR changes
-        const changes = await main.getPullRequestChanges(devOpsService, connection, inputs);
+        let changes = await main.getPullRequestChanges(devOpsService, connection, inputs);
+        if (changes && repoConfig && (repoConfig.include || repoConfig.exclude)) {
+            const allowed = new Set(filterPathsByGlobs(changes.map(c => c.path), repoConfig.include, repoConfig.exclude));
+            const before = changes.length;
+            changes = changes.filter(c => allowed.has(c.path));
+            if (changes.length < before) {
+                console.log(`📋 Repo config path filters excluded ${before - changes.length} file(s).`);
+            }
+        }
         if (!changes || changes.length === 0) {
             console.log('⚠️ No code changes to review. Task completed.');
             tl.setResult(tl.TaskResult.Succeeded, 'No code changes to review');
             return;
+        }
+
+        // Repo-specific instructions for the files actually under review
+        if (repoConfig) {
+            const extra = instructionsForFiles(repoConfig, changes.map(c => c.path));
+            if (extra.length > 0) {
+                inputs.systemInstruction +=
+                    '\n\nAdditional repository-specific review guidelines:\n' + extra.map(t => `- ${t}`).join('\n');
+                console.log(`📋 Applied ${extra.length} repo-specific instruction(s).`);
+            }
         }
 
         // 4. Generate AI analysis and post comment(s)
@@ -716,11 +744,17 @@ async function run() {
             if (typeof (devOpsService as any).getRawPatches !== 'function') {
                 console.warn('⚠️ Current DevOps provider does not support inline findings (no raw patch support). Skipping.');
             } else {
-                const { patches: rawPatches, commitId } = await (devOpsService as any).getRawPatches(
+                const rawResult = await (devOpsService as any).getRawPatches(
                     connection.projectName,
                     connection.repositoryId,
                     connection.pullRequestId
                 );
+                let rawPatches: Map<string, string> = rawResult.patches;
+                const commitId: string = rawResult.commitId;
+                if (repoConfig && (repoConfig.include || repoConfig.exclude)) {
+                    const allowed = new Set(filterPathsByGlobs(Array.from(rawPatches.keys()), repoConfig.include, repoConfig.exclude));
+                    rawPatches = new Map(Array.from(rawPatches.entries()).filter(([p]) => allowed.has(p)));
+                }
                 const postedCount = await main.generateSuggestions(aiProvider, devOpsService, connection, inputs, rawPatches, commitId);
                 if (postedCount === 0) {
                     console.log('ℹ️ No suggestions were posted.');

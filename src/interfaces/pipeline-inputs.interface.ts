@@ -1,4 +1,5 @@
 import { AIProvider } from './ai-service.interface';
+import { ReviewFindingSeverity } from './review-finding.interface';
 
 /**
  * Azure DevOps pipeline input parameters interface
@@ -36,6 +37,10 @@ export interface PipelineInputs {
     enableIncrementalDiff: boolean;
     /** Enable suggestion mode (default false; true posts inline GitHub suggestions instead of single PR comment) */
     enableSuggestionMode: boolean;
+    /** Minimum severity an inline finding must have to be posted (default 'warning') */
+    severityThreshold: ReviewFindingSeverity;
+    /** Maximum number of inline findings posted per review (default 20) */
+    maxFindings: number;
 }
 
 /**

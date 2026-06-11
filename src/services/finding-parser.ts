@@ -1,5 +1,6 @@
 import {
     ReviewFinding,
+    ReviewFindingSeverity,
     REVIEW_FINDING_SEVERITIES,
     REVIEW_FINDING_CATEGORIES
 } from '../interfaces/review-finding.interface';
@@ -90,6 +91,35 @@ export function parseFindingsResponse(rawResponse: string): ReviewFinding[] {
         console.warn(`⚠️ ${dropped}/${parsed.length} finding(s) dropped — response may use an outdated schema.`);
     }
     return findings;
+}
+
+/**
+ * Filter findings by minimum severity, then cap the total count keeping the
+ * most severe findings first (stable order among equal severities).
+ */
+export function filterFindings(
+    findings: ReviewFinding[],
+    threshold: ReviewFindingSeverity,
+    maxFindings: number
+): ReviewFinding[] {
+    const rank = (severity: ReviewFindingSeverity) => REVIEW_FINDING_SEVERITIES.indexOf(severity);
+    const thresholdRank = rank(threshold);
+
+    const eligible = findings.filter(f => rank(f.severity) <= thresholdRank);
+    const withheld = findings.length - eligible.length;
+    if (withheld > 0) {
+        console.log(`ℹ️ ${withheld} finding(s) below severity threshold '${threshold}' withheld.`);
+    }
+
+    if (eligible.length <= maxFindings) return eligible;
+
+    const capped = eligible
+        .map((finding, index) => ({ finding, index }))
+        .sort((a, b) => rank(a.finding.severity) - rank(b.finding.severity) || a.index - b.index)
+        .slice(0, maxFindings)
+        .map(entry => entry.finding);
+    console.log(`ℹ️ Finding cap reached: posting top ${maxFindings} of ${eligible.length} by severity (${eligible.length - maxFindings} withheld).`);
+    return capped;
 }
 
 /**

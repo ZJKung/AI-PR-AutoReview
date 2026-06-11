@@ -198,6 +198,27 @@
             "defaultValue": "false",
             "required": false,
             "helpMarkDown": "When enabled, posts inline code suggestions directly on changed lines using GitHub's suggestion format (one-click accept). Only supported for GitHub provider — falls back to a standard review comment for Azure DevOps."
+        },
+        {
+            "name": "inputSeverityThreshold",
+            "type": "pickList",
+            "label": "Severity Threshold",
+            "defaultValue": "warning",
+            "required": false,
+            "options": {
+                "critical": "Critical only",
+                "warning": "Warning and above",
+                "nit": "All findings (including nits)"
+            },
+            "helpMarkDown": "Minimum severity an inline finding must have to be posted. Findings below the threshold are logged but not posted. Only applies when Suggestion Mode is enabled."
+        },
+        {
+            "name": "inputMaxFindings",
+            "type": "string",
+            "label": "Max Findings",
+            "defaultValue": "20",
+            "required": false,
+            "helpMarkDown": "Maximum number of inline findings posted per review. When exceeded, the most severe findings are kept. Only applies when Suggestion Mode is enabled."
         }
     ],
     "execution": {

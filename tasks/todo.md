@@ -4,7 +4,7 @@
 
 ## Phase 1 — Structured Findings Foundation
 - [x] Task 1: `ReviewFinding` type + `parseFindingsResponse` + new prompt contract (S) — done 2026-06-11, 10 unit tests
-- [ ] Task 2: Severity threshold + max-findings filtering, new task inputs (S)
+- [x] Task 2: Severity threshold + max-findings filtering, new task inputs (S) — done 2026-06-11, 8 unit tests
 - [ ] **Checkpoint A:** typecheck + tests clean; `devscripts:ai` emits typed filtered findings; schema frozen after human review
 
 ## Phase 2 — Azure DevOps Inline Comments

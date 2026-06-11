@@ -7,8 +7,8 @@ import { AIProvider, AI_PROVIDERS } from './interfaces/ai-service.interface';
 import { AIProviderService } from './services/ai-provider.service';
 import { DevOpsProviderService } from './services/devops-provider.service';
 import { DevOpsService } from './interfaces/devops-service.interface';
-import { ReviewFinding } from './interfaces/review-finding.interface';
-import { FINDINGS_SYSTEM_INSTRUCTION, parseFindingsResponse } from './services/finding-parser';
+import { ReviewFinding, ReviewFindingSeverity, REVIEW_FINDING_SEVERITIES } from './interfaces/review-finding.interface';
+import { FINDINGS_SYSTEM_INSTRUCTION, parseFindingsResponse, filterFindings } from './services/finding-parser';
 
 
 const DEFAULT_SYSTEM_INSTRUCTION = `You are a senior software engineer. Please help complete the PR code review and respond according to the following instructions.
@@ -188,6 +188,19 @@ export class Main {
         const enableIncrementalDiff = this.getInputValue('EnableIncrementalDiff', 'inputEnableIncrementalDiff', false, 'false').toLowerCase() === 'true';
         const enableSuggestionMode = this.getInputValue('EnableSuggestionMode', 'inputEnableSuggestionMode', false, 'false').toLowerCase() === 'true';
 
+        // Severity threshold for posting inline findings (default: warning)
+        const severityThresholdRaw = this.getInputValue('SeverityThreshold', 'inputSeverityThreshold', false, 'warning').trim().toLowerCase();
+        let severityThreshold: ReviewFindingSeverity = 'warning';
+        if ((REVIEW_FINDING_SEVERITIES as readonly string[]).includes(severityThresholdRaw)) {
+            severityThreshold = severityThresholdRaw as ReviewFindingSeverity;
+        } else if (severityThresholdRaw !== 'warning') {
+            console.warn(`⚠️ Invalid severity threshold '${severityThresholdRaw}'. Falling back to 'warning'.`);
+        }
+
+        // Cap on posted inline findings (default: 20)
+        const maxFindingsRaw = parseInt(this.getInputValue('MaxFindings', 'inputMaxFindings', false, '20'));
+        const maxFindings = Number.isInteger(maxFindingsRaw) && maxFindingsRaw > 0 ? maxFindingsRaw : 20;
+
         // Get GitHub Copilot timeout (only when provider is GitHubCopilot)
         let timeout: number | undefined = undefined;
         if (inputAiProvider === 'githubcopilot') {
@@ -223,7 +236,9 @@ export class Main {
             enableThrottleMode,
             showReviewContent,
             enableIncrementalDiff,
-            enableSuggestionMode
+            enableSuggestionMode,
+            severityThreshold,
+            maxFindings
         };
     }
 
@@ -498,8 +513,9 @@ export class Main {
         console.log('📨 Raw LLM suggestion response:');
         console.log(aiResponse.content);
 
-        const findings: ReviewFinding[] = parseFindingsResponse(aiResponse.content);
-        console.log(`📝 Parsed ${findings.length} finding(s):`);
+        const parsedFindings = parseFindingsResponse(aiResponse.content);
+        const findings: ReviewFinding[] = filterFindings(parsedFindings, inputs.severityThreshold, inputs.maxFindings);
+        console.log(`📝 Parsed ${parsedFindings.length} finding(s), ${findings.length} after severity filter (threshold: ${inputs.severityThreshold}, cap: ${inputs.maxFindings}):`);
         findings.forEach((item, i) => {
             console.log(`  [${i + 1}] [${item.severity}/${item.category}] ${item.file}:${item.line} — ${item.finding}`);
             if (item.suggestion !== undefined) {

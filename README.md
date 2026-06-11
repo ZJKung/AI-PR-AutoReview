@@ -18,7 +18,13 @@ This is an Azure DevOps Pipeline extension that leverages the power of Large Lan
 + **Universal AI Support**: Seamlessly switch between Google Gemini, OpenAI, Grok, Claude, GitHub Copilot, or any OpenAI-compatible endpoint.
 + **GitHub Copilot Integration**: Connect to GitHub Copilot CLI to perform reviews using your existing subscription (Individual, Business, or Enterprise), ensuring data privacy and cost-efficiency.
 + **Direct Feedback**: Publishes AI review suggestions directly to the PR as comments, threading into the conversation.
-+ **Inline Suggestion Mode** *(GitHub PRs)*: Posts actionable code suggestions directly on changed lines using GitHub's native suggestion format — reviewers can accept fixes with a single click.
++ **Inline Findings** *(Azure DevOps & GitHub)*: Posts findings directly on changed lines. On GitHub, fixes use the native suggestion format (one-click accept); on Azure DevOps, findings appear as file-anchored comment threads with a suggested-change block.
++ **Severity Filtering**: Every finding carries a severity (`critical` / `warning` / `nit`) and category (`bug` / `security` / `perf` / `style`). A configurable threshold and cap keep the bot from flooding your PR with nits.
++ **Walkthrough Summary**: The review comment leads with a status line and a file-by-file walkthrough table — and is **updated in place** on repeated runs instead of stacking new comments.
++ **Stateful Re-reviews**: Findings are fingerprinted, so pushing new commits never re-posts the same issue. On Azure DevOps, threads whose finding was fixed are **auto-resolved** (threads with human replies are never touched).
++ **Per-Repo Configuration**: Drop an `.aireview.yml` in the repo root to set severity threshold, path filters, and per-path review instructions — no pipeline edit needed.
++ **Large PR Support**: Oversized change sets are reviewed in parallel chunks and merged into one summary, instead of being silently truncated.
++ **Intent-Aware Review**: The PR title and description are fed to the model so it can flag changes that don't match the stated goal.
 + **Highly Customizable**: Tailor the System Prompts (Inline or File-based), adjust creativity (Temperature), and control token usage.
 + **Smart Filtering**: configure included/excluded file extensions to focus the review on what matters.
 
@@ -151,7 +157,39 @@ These fields are only visible when AI Provider is set to **GitHub Copilot**.
 | Enable AI Throttle Mode           | boolean |    No    | true    | When enabled, only code diffs are sent. When disabled, the entire new file content is sent.                     |
 | Enable Incremental Diff Mode      | boolean |    No    | false   | When enabled, only the latest push changes are reviewed (requires Throttle Mode).                               |
 | Show Review Content               | boolean |    No    | true    | Print the prompt and AI response to the console for debugging.                                                  |
-| Enable Suggestion Mode            | boolean |    No    | false   | When enabled, posts inline code suggestions on changed lines using GitHub's native suggestion format (one-click accept). **GitHub provider only** — falls back to a standard review comment for Azure DevOps. |
+| Enable Suggestion Mode            | boolean |    No    | false   | When enabled, posts inline findings on changed lines. GitHub PRs use the native suggestion format (one-click accept); Azure DevOps PRs get file-anchored comment threads with a suggested-change code block. |
+
+### Review Quality Settings
+These settings shape what gets posted when **Suggestion Mode** is enabled.
+
+| Label                           |     Type | Required | Default | Description                                                                                                                                                              |
+| ------------------------------- | -------: | :------: | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Severity Threshold              | pickList |    No    | warning | Minimum severity a finding must have to be posted: `critical` (critical only), `warning` (warning and above), `nit` (everything). Withheld findings are still logged.   |
+| Max Findings                    |   string |    No    | 20      | Maximum number of inline findings posted per review. When exceeded, the most severe findings are kept.                                                                   |
+| Update Existing Summary Comment | pickList |    No    | auto    | `auto`: edit the previous summary in place when Suggestion Mode is on (append otherwise). `on` / `off` override explicitly.                                              |
+
+## 📝 Per-Repo Configuration (`.aireview.yml`)
+
+Repo owners can override pipeline settings without touching the pipeline by adding an
+`.aireview.yml` file to the repository root. Fields set in the file win over task inputs;
+a missing or malformed file is ignored and never fails the build.
+
+```yaml
+# .aireview.yml
+severityThreshold: nit        # critical | warning | nit
+maxFindings: 10
+include:                      # optional — when set, only matching paths are reviewed
+  - "src/**"
+exclude:
+  - "**/*.generated.ts"
+instructions:                 # extra review guidance applied per path glob
+  - glob: "src/api/**"
+    text: "Check authorization on every endpoint."
+  - glob: "src/db/**"
+    text: "Flag any raw SQL string concatenation."
+```
+
+Supported glob syntax: `**` (crosses directories), `*` (within one path segment), `?` (single character).
 
 
 ## 🎉 Result display

@@ -14,7 +14,7 @@
 
 ## Phase 3 — Updatable Walkthrough Summary
 - [x] Task 5: `findBotComment` + `updatePullRequestComment` in both providers (M) — done 2026-06-11, 7 unit tests
-- [ ] Task 6: Walkthrough prompt (status + file table) with upsert via hidden marker; upsert default-on when suggestion mode enabled (M)
+- [x] Task 6: Walkthrough prompt (status + file table) with upsert via hidden marker; upsert default-on when suggestion mode enabled (M) — done 2026-06-11, 8 unit tests
 - [ ] **Checkpoint C:** repeated runs edit one summary comment, never stack
 
 ## Phase 4 — Dedup + Thread Resolution

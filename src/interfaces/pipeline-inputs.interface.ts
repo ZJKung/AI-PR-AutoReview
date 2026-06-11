@@ -41,6 +41,8 @@ export interface PipelineInputs {
     severityThreshold: ReviewFindingSeverity;
     /** Maximum number of inline findings posted per review (default 20) */
     maxFindings: number;
+    /** Edit the previous bot summary comment in place instead of appending ('auto' resolves from suggestion mode) */
+    updateExistingComment: boolean;
 }
 
 /**

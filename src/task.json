@@ -219,6 +219,19 @@
             "defaultValue": "20",
             "required": false,
             "helpMarkDown": "Maximum number of inline findings posted per review. When exceeded, the most severe findings are kept. Only applies when Suggestion Mode is enabled."
+        },
+        {
+            "name": "inputUpdateExistingComment",
+            "type": "pickList",
+            "label": "Update Existing Summary Comment",
+            "defaultValue": "auto",
+            "required": false,
+            "options": {
+                "auto": "Auto (on when Suggestion Mode is enabled)",
+                "on": "Always update in place",
+                "off": "Always append a new comment"
+            },
+            "helpMarkDown": "When active, the AI review summary comment is edited in place on repeated runs instead of posting a new comment each time. 'Auto' enables this behavior together with Suggestion Mode."
         }
     ],
     "execution": {

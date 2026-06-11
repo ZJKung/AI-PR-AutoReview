@@ -12,16 +12,20 @@ import { FINDINGS_SYSTEM_INSTRUCTION, parseFindingsResponse, filterFindings } fr
 import { formatFindingComment } from './services/finding-formatter';
 
 
+/** Hidden marker identifying the bot's summary comment for upsert */
+export const SUMMARY_MARKER = '<!-- ai-review:summary -->';
+
 const DEFAULT_SYSTEM_INSTRUCTION = `You are a senior software engineer. Please help complete the PR code review and respond according to the following instructions.
 1. Begin with a summary conclusion of the analysis, for example: AI Review Status: 🟢 Recommend Approval, 🔴 Recommend Rejection, 🟡 Needs Human Review, followed by a brief explanation within 100 characters, then use <hr/> for a line break.
-2. Do not include any content unrelated to the code review.
-3. Use English (en-US) for the review result. Each issue should be listed as a bullet point. Use the following format: Emoji [Category] : Detailed explanation. Choose from: 🔴 [Critical], ⚠️ [Warning], 💡 [Suggestion], ✨ [Convention], or ❓ [Question].
-4. Since each change may involve multiple modified files, mark each file before its corresponding review comments for easy reference.
-5. If too many files are modified to analyze them all, limit the total response length to within 15,000 characters.
-6. Skip analysis of images, binary files, or other non-code files.
-7. Skip analysis of deleted files.
-8. Use Markdown format for the reply.
-9. Assume the provided code snippets are part of a larger, valid codebase. Do not report errors regarding "unresolved symbols," "missing definitions," or "reference issues" that may exist outside the provided diff. Focus your analysis strictly on the logic and quality of the changes themselves.`;
+2. After the status line, add a "Walkthrough" section: one short paragraph describing the overall intent of the change, followed by a markdown table with columns File | Change Summary covering each modified file.
+3. Do not include any content unrelated to the code review.
+4. Use English (en-US) for the review result. Each issue should be listed as a bullet point. Use the following format: Emoji [Category] : Detailed explanation. Choose from: 🔴 [Critical], ⚠️ [Warning], 💡 [Suggestion], ✨ [Convention], or ❓ [Question].
+5. Since each change may involve multiple modified files, mark each file before its corresponding review comments for easy reference.
+6. If too many files are modified to analyze them all, limit the total response length to within 15,000 characters.
+7. Skip analysis of images, binary files, or other non-code files.
+8. Skip analysis of deleted files.
+9. Use Markdown format for the reply.
+10. Assume the provided code snippets are part of a larger, valid codebase. Do not report errors regarding "unresolved symbols," "missing definitions," or "reference issues" that may exist outside the provided diff. Focus your analysis strictly on the logic and quality of the changes themselves.`;
 
 const ALLOWED_FILE_EXTENSIONS = ['.md', '.txt', '.json', '.yaml', '.yml', '.xml', '.html'];
 
@@ -202,6 +206,11 @@ export class Main {
         const maxFindingsRaw = parseInt(this.getInputValue('MaxFindings', 'inputMaxFindings', false, '20'));
         const maxFindings = Number.isInteger(maxFindingsRaw) && maxFindingsRaw > 0 ? maxFindingsRaw : 20;
 
+        // Summary comment upsert: 'auto' follows suggestion mode; 'on'/'off' override explicitly
+        const updateExistingRaw = this.getInputValue('UpdateExistingComment', 'inputUpdateExistingComment', false, 'auto').trim().toLowerCase();
+        const updateExistingComment = updateExistingRaw === 'on'
+            || (updateExistingRaw !== 'off' && enableSuggestionMode);
+
         // Get GitHub Copilot timeout (only when provider is GitHubCopilot)
         let timeout: number | undefined = undefined;
         if (inputAiProvider === 'githubcopilot') {
@@ -239,7 +248,8 @@ export class Main {
             enableIncrementalDiff,
             enableSuggestionMode,
             severityThreshold,
-            maxFindings
+            maxFindings,
+            updateExistingComment
         };
     }
 
@@ -550,26 +560,52 @@ export class Main {
     }
 
     /**
-     * Add review content as PR comment
+     * Add review content as PR comment. When updateExisting is enabled and the
+     * provider supports it, the previous bot summary (found via hidden marker)
+     * is edited in place instead of posting a new comment.
      * @param devOpsService - DevOps service instance
      * @param connection - Azure DevOps connection info
      * @param reviewContent - AI analysis content
      * @param providerName - AI provider name
      * @param aiModelName - AI model name
+     * @param updateExisting - Edit the previous summary comment instead of appending
      */
     async addReviewComment(
         devOpsService: DevOpsService,
         connection: DevOpsConnection,
         reviewContent: string,
         providerName: string,
-        aiModelName: string
+        aiModelName: string,
+        updateExisting: boolean = false
     ) {
         const commentHeader = `🤖 AI Code Review (${providerName} - ${aiModelName})`;
+        const contentWithMarker = `${reviewContent}\n\n${SUMMARY_MARKER}`;
+
+        if (updateExisting && devOpsService.findBotComment && devOpsService.updatePullRequestComment) {
+            const existing = await devOpsService.findBotComment(
+                connection.projectName,
+                connection.repositoryId,
+                connection.pullRequestId,
+                SUMMARY_MARKER
+            );
+            if (existing) {
+                await devOpsService.updatePullRequestComment(
+                    connection.projectName,
+                    connection.repositoryId,
+                    connection.pullRequestId,
+                    existing,
+                    `# ${commentHeader}\n${contentWithMarker}`
+                );
+                console.log('🔄 Updated existing AI review summary comment.');
+                return;
+            }
+        }
+
         await devOpsService.addPullRequestComment(
             connection.projectName,
             connection.repositoryId,
             connection.pullRequestId,
-            reviewContent,
+            contentWithMarker,
             commentHeader
         );
     }
@@ -630,7 +666,7 @@ async function run() {
         // 4. Generate AI analysis and post comment(s)
         // Always post the summary review comment.
         const reviewResult = await main.generateAIReview(aiProvider, inputs, changes);
-        await main.addReviewComment(devOpsService, connection, reviewResult.content, inputs.aiProvider, inputs.modelName);
+        await main.addReviewComment(devOpsService, connection, reviewResult.content, inputs.aiProvider, inputs.modelName, inputs.updateExistingComment);
 
         // If suggestion mode is on AND the provider supports inline suggestions, also post inline suggestions.
         if (inputs.enableSuggestionMode) {

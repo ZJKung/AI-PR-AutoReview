@@ -19,7 +19,7 @@ export const SUMMARY_MARKER = '<!-- ai-review:summary -->';
 
 const DEFAULT_SYSTEM_INSTRUCTION = `You are a senior software engineer. Please help complete the PR code review and respond according to the following instructions.
 1. Begin with a summary conclusion of the analysis, for example: AI Review Status: 🟢 Recommend Approval, 🔴 Recommend Rejection, 🟡 Needs Human Review, followed by a brief explanation within 100 characters, then use <hr/> for a line break.
-2. After the status line, add a "Walkthrough" section: one short paragraph describing the overall intent of the change, followed by a markdown table with columns File | Change Summary covering each modified file.
+2. After the status line, add a "Walkthrough" section: one short paragraph describing the overall intent of the change, followed by a markdown table with columns File | Change Summary covering each modified file. When a "PR intent" block is provided in the prompt, state whether the changes match the stated intent.
 3. Do not include any content unrelated to the code review.
 4. Use English (en-US) for the review result. Each issue should be listed as a bullet point. Use the following format: Emoji [Category] : Detailed explanation. Choose from: 🔴 [Critical], ⚠️ [Warning], 💡 [Suggestion], ✨ [Convention], or ❓ [Question].
 5. Since each change may involve multiple modified files, mark each file before its corresponding review comments for easy reference.
@@ -30,6 +30,19 @@ const DEFAULT_SYSTEM_INSTRUCTION = `You are a senior software engineer. Please h
 10. Assume the provided code snippets are part of a larger, valid codebase. Do not report errors regarding "unresolved symbols," "missing definitions," or "reference issues" that may exist outside the provided diff. Focus your analysis strictly on the logic and quality of the changes themselves.`;
 
 const ALLOWED_FILE_EXTENSIONS = ['.md', '.txt', '.json', '.yaml', '.yml', '.xml', '.html'];
+
+/**
+ * Build a prompt block describing the PR's stated intent so the model can
+ * check whether the changes match it. Returns '' when there is nothing to say.
+ */
+export function buildPrIntentBlock(title: string, description: string): string {
+    if (!title.trim() && !description.trim()) return '';
+    const lines = ['## PR intent (stated by the author)'];
+    if (title.trim()) lines.push(`Title: ${title.trim()}`);
+    if (description.trim()) lines.push(`Description: ${description.trim()}`);
+    lines.push('Consider whether the changes match this stated intent.\n');
+    return lines.join('\n');
+}
 
 export class Main {
     private isDebugMode: boolean;
@@ -389,7 +402,8 @@ export class Main {
     async generateAIReview(
         aiProvider: AIProviderService,
         inputs: PipelineInputs,
-        changes: Array<{ path: string; changeType: any; content: string }>
+        changes: Array<{ path: string; changeType: any; content: string }>,
+        intentBlock: string = ''
     ) {
         // Get AI service
         const aiService = aiProvider.getService(inputs.aiProvider);
@@ -400,7 +414,10 @@ export class Main {
             .join('\n');
 
         // Replace placeholder in prompt template
-        const prompt = inputs.promptTemplate.replace('{code_changes}', codeChanges);
+        let prompt = inputs.promptTemplate.replace('{code_changes}', codeChanges);
+        if (intentBlock) {
+            prompt = `${intentBlock}\n${prompt}`;
+        }
 
         // Call AI service
         const aiResponse = await aiService.generateComment(
@@ -476,7 +493,8 @@ export class Main {
         connection: DevOpsConnection,
         inputs: PipelineInputs,
         rawPatches: Map<string, string>,
-        commitId: string
+        commitId: string,
+        intentBlock: string = ''
     ): Promise<number> {
         if (!devOpsService.addInlineSuggestionComment) {
             console.warn('⚠️ Provider does not support inline suggestions. Skipping.');
@@ -506,7 +524,7 @@ export class Main {
         if (customContext) {
             console.log('ℹ️ Custom system instruction detected — injected into prompt to preserve JSON output format.');
         }
-        const prompt = customContext + annotatedBlocks;
+        const prompt = (intentBlock ? `${intentBlock}\n` : '') + customContext + annotatedBlocks;
 
         console.log('🤖 Generating inline suggestions...');
         const aiResponse = await aiService.generateComment(
@@ -734,8 +752,23 @@ async function run() {
         }
 
         // 4. Generate AI analysis and post comment(s)
+        // Fetch PR intent (title/description) so the model can check change-vs-intent
+        let intentBlock = '';
+        if (devOpsService.getPullRequestDetails) {
+            try {
+                const details = await devOpsService.getPullRequestDetails(
+                    connection.projectName,
+                    connection.repositoryId,
+                    connection.pullRequestId
+                );
+                intentBlock = buildPrIntentBlock(details.title, details.description);
+            } catch (err: any) {
+                console.warn(`⚠️ Could not fetch PR details for intent block: ${err.message}`);
+            }
+        }
+
         // Always post the summary review comment.
-        const reviewResult = await main.generateAIReview(aiProvider, inputs, changes);
+        const reviewResult = await main.generateAIReview(aiProvider, inputs, changes, intentBlock);
         await main.addReviewComment(devOpsService, connection, reviewResult.content, inputs.aiProvider, inputs.modelName, inputs.updateExistingComment);
 
         // If suggestion mode is on AND the provider supports inline suggestions, also post inline suggestions.
@@ -755,7 +788,7 @@ async function run() {
                     const allowed = new Set(filterPathsByGlobs(Array.from(rawPatches.keys()), repoConfig.include, repoConfig.exclude));
                     rawPatches = new Map(Array.from(rawPatches.entries()).filter(([p]) => allowed.has(p)));
                 }
-                const postedCount = await main.generateSuggestions(aiProvider, devOpsService, connection, inputs, rawPatches, commitId);
+                const postedCount = await main.generateSuggestions(aiProvider, devOpsService, connection, inputs, rawPatches, commitId, intentBlock);
                 if (postedCount === 0) {
                     console.log('ℹ️ No suggestions were posted.');
                 }

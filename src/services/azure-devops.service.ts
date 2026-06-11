@@ -326,6 +326,25 @@ export class AzureDevOpsService extends BaseDevOpsService {
     }
 
     /**
+     * Get the PR title and description.
+     * @param projectName - Project name
+     * @param repositoryId - Repository ID
+     * @param pullRequestId - Pull Request ID
+     */
+    public async getPullRequestDetails(
+        projectName: string,
+        repositoryId: string,
+        pullRequestId: number
+    ): Promise<{ title: string; description: string }> {
+        const gitApi = await this.getGitApi();
+        const pr = await gitApi.getPullRequest(repositoryId, pullRequestId, projectName);
+        return {
+            title: pr?.title ?? '',
+            description: pr?.description ?? ''
+        };
+    }
+
+    /**
      * Mark an inline comment thread as fixed (resolved).
      * @param projectName - Project name
      * @param repositoryId - Repository ID

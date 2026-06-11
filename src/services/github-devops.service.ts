@@ -145,6 +145,25 @@ export class GitHubDevOpsService extends BaseDevOpsService {
     }
 
     /**
+     * Get the PR title and description (body).
+     * @param _projectName - Unused for GitHub
+     * @param repositoryId - owner/repo format
+     * @param pullRequestId - PR number
+     */
+    public async getPullRequestDetails(
+        _projectName: string,
+        repositoryId: string,
+        pullRequestId: number
+    ): Promise<{ title: string; description: string }> {
+        const { owner, repo } = this.parseOwnerRepo(repositoryId);
+        const res = await this.client.rest.pulls.get({ owner, repo, pull_number: pullRequestId });
+        return {
+            title: res.data?.title ?? '',
+            description: res.data?.body ?? ''
+        };
+    }
+
+    /**
      * List inline review comment threads on the PR. Top-level review comments
      * are returned with the count of replies threaded under them.
      * @param _projectName - Unused for GitHub

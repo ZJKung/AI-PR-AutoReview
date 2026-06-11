@@ -154,6 +154,19 @@ export interface DevOpsService {
     ): Promise<InlineThread[]>;
 
     /**
+     * Get the PR title and description so the review can check the change
+     * against its stated intent.
+     * @param projectName - Project name (may be unused for GitHub)
+     * @param repositoryId - Repository ID or owner/repo
+     * @param pullRequestId - Pull Request ID
+     */
+    getPullRequestDetails?(
+        projectName: string,
+        repositoryId: string,
+        pullRequestId: number
+    ): Promise<{ title: string; description: string }>;
+
+    /**
      * Mark an inline comment thread as resolved/fixed.
      * Optional — GitHub's REST API does not support resolving review threads.
      * @param projectName - Project name (may be unused for GitHub)

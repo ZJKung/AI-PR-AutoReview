@@ -7,6 +7,8 @@ import { AIProvider, AI_PROVIDERS } from './interfaces/ai-service.interface';
 import { AIProviderService } from './services/ai-provider.service';
 import { DevOpsProviderService } from './services/devops-provider.service';
 import { DevOpsService } from './interfaces/devops-service.interface';
+import { ReviewFinding } from './interfaces/review-finding.interface';
+import { FINDINGS_SYSTEM_INSTRUCTION, parseFindingsResponse } from './services/finding-parser';
 
 
 const DEFAULT_SYSTEM_INSTRUCTION = `You are a senior software engineer. Please help complete the PR code review and respond according to the following instructions.
@@ -19,31 +21,6 @@ const DEFAULT_SYSTEM_INSTRUCTION = `You are a senior software engineer. Please h
 7. Skip analysis of deleted files.
 8. Use Markdown format for the reply.
 9. Assume the provided code snippets are part of a larger, valid codebase. Do not report errors regarding "unresolved symbols," "missing definitions," or "reference issues" that may exist outside the provided diff. Focus your analysis strictly on the logic and quality of the changes themselves.`;
-
-const SUGGESTION_SYSTEM_INSTRUCTION =
-'You are a senior software engineer performing an inline code review.\n\n' +
-'Return ONLY a JSON array wrapped in a ```json code block. No explanation outside the block.\n\n' +
-'Each element MUST have exactly:\n' +
-'- "file": the file path exactly as shown in the prompt\n' +
-'- "line": integer line number from a [L<N>] label in the annotated diff (NEW file lines only)\n' +
-'- "comment": concise English explanation of the issue (1-3 sentences)\n' +
-'- "suggestion": exact replacement source code for that line — no markdown fences\n\n' +
-'Rules:\n' +
-'1. Only suggest changes for bugs, security issues, performance problems, or clear correctness errors.\n' +
-'2. Never target removed lines ([L<N>-removed]) — they no longer exist in the new file.\n' +
-'3. The "line" MUST be taken directly from a [L<N>] label. Never invent line numbers.\n' +
-'4. If nothing is worth suggesting, return: ```json\n[]\n```\n\n' +
-'Example output:\n' +
-'```json\n' +
-'[\n' +
-'  {\n' +
-'    "file": "src/utils.ts",\n' +
-'    "line": 42,\n' +
-'    "comment": "Using == instead of === can cause unexpected type coercion.",\n' +
-'    "suggestion": "  if (value === null) {"\n' +
-'  }\n' +
-']\n' +
-'```';
 
 const ALLOWED_FILE_EXTENSIONS = ['.md', '.txt', '.json', '.yaml', '.yml', '.xml', '.html'];
 
@@ -457,35 +434,6 @@ export class Main {
     }
 
     /**
-     * Parse the LLM suggestion response, extracting the JSON array from a ```json block.
-     */
-    private parseSuggestionsResponse(rawResponse: string): Array<{
-        file: string; line: number; comment: string; suggestion: string;
-    }> {
-        const match = rawResponse.match(/```json\s*([\s\S]*?)```/);
-        if (!match) {
-            console.warn('⚠️ No ```json block found in LLM suggestion response.');
-            return [];
-        }
-        try {
-            const parsed = JSON.parse(match[1].trim());
-            if (!Array.isArray(parsed)) {
-                console.warn('⚠️ Suggestion response is not a JSON array.');
-                return [];
-            }
-            return parsed.filter(item =>
-                typeof item.file === 'string' &&
-                typeof item.line === 'number' &&
-                typeof item.comment === 'string' &&
-                typeof item.suggestion === 'string'
-            );
-        } catch (e) {
-            console.warn(`⚠️ Failed to parse suggestion JSON: ${e}`);
-            return [];
-        }
-    }
-
-    /**
      * Generate and post inline code suggestions as GitHub PR review comments.
      * @param aiProvider - AI provider service instance
      * @param devOpsService - DevOps service instance (must implement addInlineSuggestionComment)
@@ -521,7 +469,7 @@ export class Main {
             return 0;
         }
 
-        // Always use SUGGESTION_SYSTEM_INSTRUCTION to protect JSON output format.
+        // Always use FINDINGS_SYSTEM_INSTRUCTION to protect JSON output format.
         // If the user supplied a custom system instruction, inject it into the user
         // prompt instead so it still influences the review without breaking parsing.
         const customContext = inputs.systemInstruction !== DEFAULT_SYSTEM_INSTRUCTION
@@ -534,7 +482,7 @@ export class Main {
 
         console.log('🤖 Generating inline suggestions...');
         const aiResponse = await aiService.generateComment(
-            SUGGESTION_SYSTEM_INSTRUCTION,
+            FINDINGS_SYSTEM_INSTRUCTION,
             prompt,
             {
                 maxOutputTokens: inputs.maxOutputTokens,
@@ -550,16 +498,24 @@ export class Main {
         console.log('📨 Raw LLM suggestion response:');
         console.log(aiResponse.content);
 
-        const suggestions = this.parseSuggestionsResponse(aiResponse.content);
-        console.log(`📝 Parsed ${suggestions.length} suggestion(s):`);
-        suggestions.forEach((item, i) => {
-            console.log(`  [${i + 1}] ${item.file}:${item.line} — ${item.comment}`);
-            console.log(`       suggestion: ${item.suggestion}`);
+        const findings: ReviewFinding[] = parseFindingsResponse(aiResponse.content);
+        console.log(`📝 Parsed ${findings.length} finding(s):`);
+        findings.forEach((item, i) => {
+            console.log(`  [${i + 1}] [${item.severity}/${item.category}] ${item.file}:${item.line} — ${item.finding}`);
+            if (item.suggestion !== undefined) {
+                console.log(`       suggestion: ${item.suggestion}`);
+            }
         });
-        if (suggestions.length === 0) return 0;
+        if (findings.length === 0) return 0;
 
         let posted = 0;
-        for (const item of suggestions) {
+        for (const item of findings) {
+            // Findings without a mechanical fix cannot be posted as inline suggestions yet;
+            // plain inline comment support arrives with the Azure DevOps inline flow.
+            if (item.suggestion === undefined) {
+                console.log(`ℹ️ Skipping finding without suggestion on ${item.file}:${item.line} (not yet postable inline).`);
+                continue;
+            }
             try {
                 console.log(`📌 Posting suggestion on ${item.file}:${item.line}...`);
                 await devOpsService.addInlineSuggestionComment!(
@@ -567,7 +523,7 @@ export class Main {
                     connection.pullRequestId,
                     item.file,
                     item.line,
-                    item.comment,
+                    item.finding,
                     item.suggestion,
                     commitId,
                     connection.projectName
@@ -578,7 +534,7 @@ export class Main {
             }
         }
 
-        console.log(`✅ Posted ${posted}/${suggestions.length} inline suggestion(s)`);
+        console.log(`✅ Posted ${posted}/${findings.length} inline suggestion(s)`);
         return posted;
     }
 

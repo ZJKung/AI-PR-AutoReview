@@ -12,6 +12,7 @@ import { FINDINGS_SYSTEM_INSTRUCTION, parseFindingsResponse, filterFindings } fr
 import { formatFindingComment } from './services/finding-formatter';
 import { computeFindingFingerprint, fingerprintMarker, extractFingerprints, selectNewFindings, selectResolvedThreads } from './services/finding-state';
 import { loadRepoConfig, applyRepoConfig, filterPathsByGlobs, instructionsForFiles } from './services/repo-config.service';
+import { splitIntoChunks, runWithConcurrency, DEFAULT_CHUNK_BUDGET_CHARS, DEFAULT_CHUNK_CONCURRENCY } from './services/chunking.service';
 
 
 /** Hidden marker identifying the bot's summary comment for upsert */
@@ -407,40 +408,69 @@ export class Main {
     ) {
         // Get AI service
         const aiService = aiProvider.getService(inputs.aiProvider);
-
-        // Combine change content
-        const codeChanges = changes
-            .map(change => `\n## File: ${change.path}\n\`\`\`\n${change.content}\n\`\`\``)
-            .join('\n');
-
-        // Replace placeholder in prompt template
-        let prompt = inputs.promptTemplate.replace('{code_changes}', codeChanges);
-        if (intentBlock) {
-            prompt = `${intentBlock}\n${prompt}`;
-        }
-
-        // Call AI service
-        const aiResponse = await aiService.generateComment(
-            inputs.systemInstruction,
-            prompt,
-            {
-                maxOutputTokens: inputs.maxOutputTokens,
-                temperature: inputs.temperature,
-                showReviewContent: inputs.showReviewContent
-            }
-        );
-
-        // Log total token usage
-        if (aiResponse.inputTokens && aiResponse.outputTokens) {
-            const totalTokens = aiResponse.inputTokens + aiResponse.outputTokens;
-            console.log(`💰 Total Token Usage: ${totalTokens} (Input: ${aiResponse.inputTokens}, Output: ${aiResponse.outputTokens})`);
-        }
-
-        return {
-            content: aiResponse.content,
-            inputTokens: aiResponse.inputTokens || 0,
-            outputTokens: aiResponse.outputTokens || 0
+        const requestOptions = {
+            maxOutputTokens: inputs.maxOutputTokens,
+            temperature: inputs.temperature,
+            showReviewContent: inputs.showReviewContent
         };
+        const toBlock = (change: { path: string; content: string }) =>
+            `\n## File: ${change.path}\n\`\`\`\n${change.content}\n\`\`\``;
+        const buildPrompt = (subset: Array<{ path: string; content: string }>) => {
+            const codeChanges = subset.map(toBlock).join('\n');
+            const prompt = inputs.promptTemplate.replace('{code_changes}', codeChanges);
+            return intentBlock ? `${intentBlock}\n${prompt}` : prompt;
+        };
+
+        const totalSize = changes.reduce((sum, c) => sum + c.content.length, 0);
+
+        // Small change sets: single request (the common path)
+        if (totalSize <= DEFAULT_CHUNK_BUDGET_CHARS) {
+            const aiResponse = await aiService.generateComment(inputs.systemInstruction, buildPrompt(changes), requestOptions);
+            if (aiResponse.inputTokens && aiResponse.outputTokens) {
+                console.log(`💰 Total Token Usage: ${aiResponse.inputTokens + aiResponse.outputTokens} (Input: ${aiResponse.inputTokens}, Output: ${aiResponse.outputTokens})`);
+            }
+            return {
+                content: aiResponse.content,
+                inputTokens: aiResponse.inputTokens || 0,
+                outputTokens: aiResponse.outputTokens || 0
+            };
+        }
+
+        // Large change sets: review per chunk in parallel, then aggregate.
+        // Avoids the silent truncation cliff of one oversized request.
+        const chunks = splitIntoChunks(changes, DEFAULT_CHUNK_BUDGET_CHARS);
+        console.log(`📦 Large change set (${totalSize} chars): reviewing in ${chunks.length} chunks (budget ${DEFAULT_CHUNK_BUDGET_CHARS} chars, concurrency ${DEFAULT_CHUNK_CONCURRENCY})`);
+
+        let inputTokens = 0;
+        let outputTokens = 0;
+        const chunkTasks = chunks.map((chunk, i) => async () => {
+            try {
+                const res = await aiService.generateComment(inputs.systemInstruction, buildPrompt(chunk.files), requestOptions);
+                inputTokens += res.inputTokens || 0;
+                outputTokens += res.outputTokens || 0;
+                console.log(`📦 Chunk ${i + 1}/${chunks.length} reviewed (${chunk.files.length} file(s))`);
+                return res.content;
+            } catch (err: any) {
+                console.error(`⚠️ Chunk ${i + 1}/${chunks.length} failed: ${err.message}. Its files are skipped in this review.`);
+                return '';
+            }
+        });
+        const partials = (await runWithConcurrency(chunkTasks, DEFAULT_CHUNK_CONCURRENCY)).filter(p => p);
+        if (partials.length === 0) {
+            throw new Error('⛔ All review chunks failed');
+        }
+
+        const aggregationPrompt = (intentBlock ? `${intentBlock}\n` : '') +
+            'The following are partial code reviews of different files from the same Pull Request. ' +
+            'Merge them into one review following your system instructions: a single overall status line, ' +
+            'one combined Walkthrough covering all files, and deduplicated issues.\n\n' +
+            partials.map((p, i) => `--- Partial review ${i + 1} ---\n${p}`).join('\n\n');
+        const aggregated = await aiService.generateComment(inputs.systemInstruction, aggregationPrompt, requestOptions);
+        inputTokens += aggregated.inputTokens || 0;
+        outputTokens += aggregated.outputTokens || 0;
+
+        console.log(`💰 Total Token Usage across ${chunks.length + 1} requests: ${inputTokens + outputTokens} (Input: ${inputTokens}, Output: ${outputTokens})`);
+        return { content: aggregated.content, inputTokens, outputTokens };
     }
 
     /**

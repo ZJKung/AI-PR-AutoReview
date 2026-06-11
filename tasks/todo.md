@@ -29,8 +29,8 @@
 - [ ] **Checkpoint E:** pilot repo end-to-end; token-cost delta measured
 
 ## Phase 6 — Chunked Review
-- [ ] Task 12a: Chunk splitter + size budget (M)
-- [ ] Task 12b: Parallel chunk execution + aggregation pass (M)
+- [x] Task 12a: Chunk splitter + size budget (M) — done 2026-06-11
+- [x] Task 12b: Parallel chunk execution (concurrency 3) + aggregation pass with graceful chunk failure (M) — done 2026-06-11, 8 unit tests for 12a+12b
 - [ ] **Checkpoint F:** 50-file synthetic PR reviewed without truncation; regression pass A–E
 
 ## Phase 7 — Conversational (design only)

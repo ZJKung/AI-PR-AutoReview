@@ -34,7 +34,7 @@
 - [ ] **Checkpoint F:** 50-file synthetic PR reviewed without truncation; regression pass A–E
 
 ## Phase 7 — Conversational (design only)
-- [ ] Task 13: OpenSpec proposal — webhook service vs. iteration-time replies (S, no code)
+- [x] Task 13: OpenSpec proposal — webhook service vs. iteration-time replies (S, no code) — done 2026-06-11 at `openspec/changes/add-conversational-replies/`; recommends Option B (iteration-time) first; awaiting human approval
 
 ## Decisions (resolved 2026-06-11)
 - [x] Default severity threshold: `warning`

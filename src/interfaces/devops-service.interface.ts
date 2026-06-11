@@ -152,4 +152,19 @@ export interface DevOpsService {
         repositoryId: string,
         pullRequestId: number
     ): Promise<InlineThread[]>;
+
+    /**
+     * Mark an inline comment thread as resolved/fixed.
+     * Optional — GitHub's REST API does not support resolving review threads.
+     * @param projectName - Project name (may be unused for GitHub)
+     * @param repositoryId - Repository ID or owner/repo
+     * @param pullRequestId - Pull Request ID
+     * @param threadId - Thread to resolve
+     */
+    resolveThread?(
+        projectName: string,
+        repositoryId: string,
+        pullRequestId: number,
+        threadId: number
+    ): Promise<void>;
 }

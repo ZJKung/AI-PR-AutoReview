@@ -6,11 +6,11 @@ import { PipelineInputs, DevOpsConnection } from './interfaces/pipeline-inputs.i
 import { AIProvider, AI_PROVIDERS } from './interfaces/ai-service.interface';
 import { AIProviderService } from './services/ai-provider.service';
 import { DevOpsProviderService } from './services/devops-provider.service';
-import { DevOpsService } from './interfaces/devops-service.interface';
+import { DevOpsService, InlineThread } from './interfaces/devops-service.interface';
 import { ReviewFinding, ReviewFindingSeverity, REVIEW_FINDING_SEVERITIES } from './interfaces/review-finding.interface';
 import { FINDINGS_SYSTEM_INSTRUCTION, parseFindingsResponse, filterFindings } from './services/finding-parser';
 import { formatFindingComment } from './services/finding-formatter';
-import { computeFindingFingerprint, fingerprintMarker, extractFingerprints, selectNewFindings } from './services/finding-state';
+import { computeFindingFingerprint, fingerprintMarker, extractFingerprints, selectNewFindings, selectResolvedThreads } from './services/finding-state';
 
 
 /** Hidden marker identifying the bot's summary comment for upsert */
@@ -529,8 +529,9 @@ export class Main {
         let findings: ReviewFinding[] = filterFindings(parsedFindings, inputs.severityThreshold, inputs.maxFindings);
 
         // Deduplicate against findings already posted on a previous run
+        let existingThreads: InlineThread[] = [];
         if (devOpsService.listInlineThreads) {
-            const existingThreads = await devOpsService.listInlineThreads(
+            existingThreads = await devOpsService.listInlineThreads(
                 connection.projectName,
                 connection.repositoryId,
                 connection.pullRequestId
@@ -571,6 +572,32 @@ export class Main {
         }
 
         console.log(`✅ Posted ${posted}/${findings.length} inline finding(s)`);
+
+        // Auto-resolve bot threads whose finding is no longer reported.
+        // Conservative: only bot-created, active, reply-free threads on files in the current diff.
+        if (devOpsService.resolveThread && existingThreads.length > 0) {
+            const currentFingerprints = new Set(parsedFindings.map(computeFindingFingerprint));
+            const changedFiles = new Set(
+                Array.from(rawPatches.keys()).map(p => p.replace(/^\//, '').toLowerCase())
+            );
+            const toResolve = selectResolvedThreads(existingThreads, currentFingerprints, changedFiles);
+            for (const thread of toResolve) {
+                try {
+                    await devOpsService.resolveThread(
+                        connection.projectName,
+                        connection.repositoryId,
+                        connection.pullRequestId,
+                        thread.id
+                    );
+                } catch (err: any) {
+                    console.error(`⚠️ Failed to resolve thread ${thread.id} — ${err.message}`);
+                }
+            }
+            if (toResolve.length > 0) {
+                console.log(`🧹 Auto-resolved ${toResolve.length} fixed finding thread(s)`);
+            }
+        }
+
         return posted;
     }
 

@@ -1,5 +1,9 @@
 import { createHash } from 'crypto';
 import { ReviewFinding } from '../interfaces/review-finding.interface';
+import { InlineThread } from '../interfaces/devops-service.interface';
+
+/** Azure DevOps CommentThreadStatus.active */
+const THREAD_STATUS_ACTIVE = 1;
 
 /** Lines are bucketed so a finding keeps its identity across small shifts */
 const LINE_BUCKET_SIZE = 5;
@@ -38,6 +42,33 @@ export function extractFingerprints(bodies: string[]): Set<string> {
         }
     }
     return fingerprints;
+}
+
+/**
+ * Select bot-created threads that can be safely auto-resolved: the finding is
+ * no longer reported, the file is part of the current diff, the thread is
+ * still active, and no human has replied.
+ */
+export function selectResolvedThreads(
+    threads: InlineThread[],
+    currentFingerprints: Set<string>,
+    changedFiles: Set<string>
+): InlineThread[] {
+    return threads.filter(thread => {
+        const fingerprints = extractFingerprints([thread.body]);
+        if (fingerprints.size === 0) return false; // not a bot thread
+        if (thread.replyCount > 0) return false;   // humans are using it
+        if (thread.status !== undefined && thread.status !== THREAD_STATUS_ACTIVE) return false;
+
+        const file = (thread.filePath ?? '').replace(/^\//, '').toLowerCase();
+        if (!changedFiles.has(file)) return false; // file untouched in this diff
+
+        const stillReported = [...fingerprints].some(fp => currentFingerprints.has(fp));
+        if (stillReported) return false;
+
+        console.log(`ℹ️ Thread ${thread.id} on ${thread.filePath} eligible for auto-resolve (finding no longer reported).`);
+        return true;
+    });
 }
 
 /**

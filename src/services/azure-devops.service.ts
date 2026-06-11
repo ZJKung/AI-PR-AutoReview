@@ -326,6 +326,30 @@ export class AzureDevOpsService extends BaseDevOpsService {
     }
 
     /**
+     * Mark an inline comment thread as fixed (resolved).
+     * @param projectName - Project name
+     * @param repositoryId - Repository ID
+     * @param pullRequestId - Pull Request ID
+     * @param threadId - Thread to resolve
+     */
+    public async resolveThread(
+        projectName: string,
+        repositoryId: string,
+        pullRequestId: number,
+        threadId: number
+    ): Promise<void> {
+        const gitApi = await this.getGitApi();
+        await gitApi.updateThread(
+            { status: 2 }, // CommentThreadStatus.fixed
+            repositoryId,
+            pullRequestId,
+            threadId,
+            projectName
+        );
+        console.log(`✅ Resolved thread ${threadId} (finding no longer reported)`);
+    }
+
+    /**
      * Fetch raw patch strings for all changed (non-removed) files in a PR.
      * Uses git diff to produce unified diff output without post-processing.
      * @param projectName - Project name

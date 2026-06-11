@@ -19,7 +19,7 @@
 
 ## Phase 4 — Dedup + Thread Resolution
 - [x] Task 7: Finding fingerprints (`<!-- ai-review:fp:... -->`) + skip re-posting (M) — done 2026-06-11, 9 unit tests
-- [ ] Task 8: Auto-resolve fixed findings; never touch threads with human replies (M)
+- [x] Task 8: Auto-resolve fixed findings; never touch threads with human replies (M) — done 2026-06-11, 7 unit tests; Azure DevOps only (GitHub REST API cannot resolve review threads)
 - [ ] **Checkpoint D:** full lifecycle — review → fix → re-review shows dedup + resolution
 
 ## Phase 5 — Per-Repo Config + Context Ladder

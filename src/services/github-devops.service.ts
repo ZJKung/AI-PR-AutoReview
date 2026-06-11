@@ -1,7 +1,7 @@
 import { Octokit } from '@octokit/rest';
 import path from 'path';
 import { BaseDevOpsService } from './base-devops.service';
-import { FileChangeDetail, ExistingComment } from '../interfaces/devops-service.interface';
+import { FileChangeDetail, ExistingComment, InlineThread } from '../interfaces/devops-service.interface';
 
 /**
  * GitHub service class
@@ -142,6 +142,45 @@ export class GitHubDevOpsService extends BaseDevOpsService {
             body: content
         });
         console.log(`✅ Updated comment ${comment.commentId}`);
+    }
+
+    /**
+     * List inline review comment threads on the PR. Top-level review comments
+     * are returned with the count of replies threaded under them.
+     * @param _projectName - Unused for GitHub
+     * @param repositoryId - owner/repo format
+     * @param pullRequestId - PR number
+     */
+    public async listInlineThreads(
+        _projectName: string,
+        repositoryId: string,
+        pullRequestId: number
+    ): Promise<InlineThread[]> {
+        const { owner, repo } = this.parseOwnerRepo(repositoryId);
+        const res = await this.client.rest.pulls.listReviewComments({
+            owner,
+            repo,
+            pull_number: pullRequestId,
+            per_page: 100
+        });
+
+        const comments = res.data ?? [];
+        const replyCounts = new Map<number, number>();
+        for (const comment of comments) {
+            const parentId = (comment as any).in_reply_to_id;
+            if (parentId) {
+                replyCounts.set(parentId, (replyCounts.get(parentId) ?? 0) + 1);
+            }
+        }
+
+        return comments
+            .filter(c => !(c as any).in_reply_to_id && c.id)
+            .map(c => ({
+                id: Number(c.id),
+                body: c.body ?? '',
+                replyCount: replyCounts.get(Number(c.id)) ?? 0,
+                filePath: (c as any).path
+            }));
     }
 
     /**

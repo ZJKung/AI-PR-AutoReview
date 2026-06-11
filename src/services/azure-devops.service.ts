@@ -11,7 +11,7 @@ import * as fs from 'fs/promises';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { BaseDevOpsService } from './base-devops.service';
-import { FileChangeDetail, ExistingComment } from '../interfaces/devops-service.interface';
+import { FileChangeDetail, ExistingComment, InlineThread } from '../interfaces/devops-service.interface';
 
 /**
  * Azure DevOps API service class
@@ -292,6 +292,37 @@ export class AzureDevOpsService extends BaseDevOpsService {
             projectName
         );
         console.log(`✅ Updated comment in thread ${comment.threadId}`);
+    }
+
+    /**
+     * List inline (file-anchored) comment threads on the PR.
+     * Threads without a threadContext (e.g. summary comments) and deleted
+     * threads are excluded.
+     * @param projectName - Project name
+     * @param repositoryId - Repository ID
+     * @param pullRequestId - Pull Request ID
+     */
+    public async listInlineThreads(
+        projectName: string,
+        repositoryId: string,
+        pullRequestId: number
+    ): Promise<InlineThread[]> {
+        const gitApi = await this.getGitApi();
+        const threads = await gitApi.getThreads(repositoryId, pullRequestId, projectName);
+
+        const result: InlineThread[] = [];
+        for (const thread of threads ?? []) {
+            if (thread.isDeleted || !thread.id || !thread.threadContext?.filePath) continue;
+            if (!thread.comments?.length) continue;
+            result.push({
+                id: thread.id,
+                body: thread.comments[0].content ?? '',
+                replyCount: thread.comments.length - 1,
+                status: thread.status,
+                filePath: thread.threadContext.filePath
+            });
+        }
+        return result;
     }
 
     /**

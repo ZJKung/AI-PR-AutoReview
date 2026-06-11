@@ -31,6 +31,22 @@ export interface ExistingComment {
 }
 
 /**
+ * An inline (file-anchored) comment thread on a PR.
+ */
+export interface InlineThread {
+    /** Thread ID (Azure DevOps) or top-level review comment ID (GitHub) */
+    id: number;
+    /** Body of the first comment in the thread */
+    body: string;
+    /** Number of replies after the first comment */
+    replyCount: number;
+    /** Thread status (Azure DevOps CommentThreadStatus; undefined for GitHub) */
+    status?: number;
+    /** File the thread is anchored to, when available */
+    filePath?: string;
+}
+
+/**
  * DevOps service interface
  * Defines methods that all DevOps providers (Azure DevOps, GitHub) must implement
  */
@@ -124,4 +140,16 @@ export interface DevOpsService {
         comment: ExistingComment,
         content: string
     ): Promise<void>;
+
+    /**
+     * List inline (file-anchored) comment threads on the PR.
+     * @param projectName - Project name (may be unused for GitHub)
+     * @param repositoryId - Repository ID or owner/repo
+     * @param pullRequestId - Pull Request ID
+     */
+    listInlineThreads?(
+        projectName: string,
+        repositoryId: string,
+        pullRequestId: number
+    ): Promise<InlineThread[]>;
 }

@@ -18,7 +18,7 @@
 - [ ] **Checkpoint C:** repeated runs edit one summary comment, never stack
 
 ## Phase 4 — Dedup + Thread Resolution
-- [ ] Task 7: Finding fingerprints (`<!-- ai-review:fp:... -->`) + skip re-posting (M)
+- [x] Task 7: Finding fingerprints (`<!-- ai-review:fp:... -->`) + skip re-posting (M) — done 2026-06-11, 9 unit tests
 - [ ] Task 8: Auto-resolve fixed findings; never touch threads with human replies (M)
 - [ ] **Checkpoint D:** full lifecycle — review → fix → re-review shows dedup + resolution
 

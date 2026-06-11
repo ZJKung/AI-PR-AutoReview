@@ -10,6 +10,7 @@ import { DevOpsService } from './interfaces/devops-service.interface';
 import { ReviewFinding, ReviewFindingSeverity, REVIEW_FINDING_SEVERITIES } from './interfaces/review-finding.interface';
 import { FINDINGS_SYSTEM_INSTRUCTION, parseFindingsResponse, filterFindings } from './services/finding-parser';
 import { formatFindingComment } from './services/finding-formatter';
+import { computeFindingFingerprint, fingerprintMarker, extractFingerprints, selectNewFindings } from './services/finding-state';
 
 
 /** Hidden marker identifying the bot's summary comment for upsert */
@@ -525,8 +526,22 @@ export class Main {
         console.log(aiResponse.content);
 
         const parsedFindings = parseFindingsResponse(aiResponse.content);
-        const findings: ReviewFinding[] = filterFindings(parsedFindings, inputs.severityThreshold, inputs.maxFindings);
-        console.log(`📝 Parsed ${parsedFindings.length} finding(s), ${findings.length} after severity filter (threshold: ${inputs.severityThreshold}, cap: ${inputs.maxFindings}):`);
+        let findings: ReviewFinding[] = filterFindings(parsedFindings, inputs.severityThreshold, inputs.maxFindings);
+
+        // Deduplicate against findings already posted on a previous run
+        if (devOpsService.listInlineThreads) {
+            const existingThreads = await devOpsService.listInlineThreads(
+                connection.projectName,
+                connection.repositoryId,
+                connection.pullRequestId
+            );
+            const existingFingerprints = extractFingerprints(existingThreads.map(t => t.body));
+            if (existingFingerprints.size > 0) {
+                findings = selectNewFindings(findings, existingFingerprints);
+            }
+        }
+
+        console.log(`📝 Parsed ${parsedFindings.length} finding(s), ${findings.length} to post after severity filter and dedup (threshold: ${inputs.severityThreshold}, cap: ${inputs.maxFindings}):`);
         findings.forEach((item, i) => {
             console.log(`  [${i + 1}] [${item.severity}/${item.category}] ${item.file}:${item.line} — ${item.finding}`);
             if (item.suggestion !== undefined) {
@@ -544,7 +559,7 @@ export class Main {
                     connection.pullRequestId,
                     item.file,
                     item.line,
-                    formatFindingComment(item),
+                    `${formatFindingComment(item)}\n\n${fingerprintMarker(computeFindingFingerprint(item))}`,
                     item.suggestion,
                     commitId,
                     connection.projectName

@@ -55,15 +55,49 @@ describe('Finding Parser', () => {
         expect(findings[0].suggestion).to.equal(undefined);
     });
 
-    it('should drop items with an invalid severity but keep valid ones', () => {
+    it('should drop items with an unrecognized severity but keep valid ones', () => {
         const response = wrap(JSON.stringify([
-            { file: 'a.ts', line: 1, severity: 'blocker', category: 'bug', finding: 'x' },
+            { file: 'a.ts', line: 1, severity: 'bananas', category: 'bug', finding: 'x' },
             { file: 'b.ts', line: 2, severity: 'nit', category: 'style', finding: 'y' }
         ]));
 
         const findings = parseFindingsResponse(response);
         expect(findings).to.have.lengthOf(1);
         expect(findings[0].file).to.equal('b.ts');
+    });
+
+    it('should map common severity synonyms instead of dropping them', () => {
+        const response = wrap(JSON.stringify([
+            { file: 'a.ts', line: 1, severity: 'blocker', category: 'bug', finding: 'w' },
+            { file: 'b.ts', line: 2, severity: 'high', category: 'bug', finding: 'x' },
+            { file: 'c.ts', line: 3, severity: 'medium', category: 'perf', finding: 'y' },
+            { file: 'd.ts', line: 4, severity: 'low', category: 'style', finding: 'z' },
+            { file: 'e.ts', line: 5, severity: 'Critical', category: 'bug', finding: 'case-insensitive' }
+        ]));
+
+        const findings = parseFindingsResponse(response);
+        expect(findings.map(f => f.severity)).to.deep.equal(['critical', 'warning', 'warning', 'nit', 'critical']);
+    });
+
+    it('should map common category synonyms', () => {
+        const response = wrap(JSON.stringify([
+            { file: 'a.ts', line: 1, severity: 'warning', category: 'performance', finding: 'x' }
+        ]));
+
+        const findings = parseFindingsResponse(response);
+        expect(findings[0].category).to.equal('perf');
+    });
+
+    it('should treat an empty or whitespace suggestion as no suggestion', () => {
+        const response = wrap(JSON.stringify([
+            { file: 'a.ts', line: 1, severity: 'warning', category: 'bug', finding: 'x', suggestion: '' },
+            { file: 'b.ts', line: 2, severity: 'warning', category: 'bug', finding: 'y', suggestion: '   ' }
+        ]));
+
+        const findings = parseFindingsResponse(response);
+        expect(findings).to.have.lengthOf(2);
+        expect(findings[0].suggestion).to.equal(undefined);
+        expect(findings[1].suggestion).to.equal(undefined);
     });
 
     it('should drop items with an invalid category', () => {

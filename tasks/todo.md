@@ -5,8 +5,8 @@
 > **Status 2026-06-11:** All 13 tasks implemented (91 unit tests green, typecheck + build clean).
 > Checkpoints A–F verified at unit level. **Manual verification on a real Azure DevOps test PR
 > still pending** for: inline line anchoring (Task 3), upsert across two runs (Task 6), and the
-> dedup → fix → auto-resolve lifecycle (Tasks 7–8). Version stays 1.1.5 until v2.0.0 release
-> decision after manual verification. README updated 2026-06-11 with the new options
+> dedup → fix → auto-resolve lifecycle (Tasks 7–8). **Update:** inline posting, dedup, and
+> severity filtering verified on a live ADO PR 2026-06-11; **v2.0.0 bumped**. README updated with the new options
 > (customer-facing — review before the next marketplace publish).
 
 ## Phase 1 — Structured Findings Foundation

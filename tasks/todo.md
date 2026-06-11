@@ -1,6 +1,13 @@
 # Todo: CodeRabbit-Parity Review Bot
 
 > Checklist view of `tasks/plan.md`. Work top-to-bottom; stop at each checkpoint for verification + human review.
+>
+> **Status 2026-06-11:** All 13 tasks implemented (91 unit tests green, typecheck + build clean).
+> Checkpoints A–F verified at unit level. **Manual verification on a real Azure DevOps test PR
+> still pending** for: inline line anchoring (Task 3), upsert across two runs (Task 6), and the
+> dedup → fix → auto-resolve lifecycle (Tasks 7–8). Version stays 1.1.5 until v2.0.0 release
+> decision after manual verification. README docs for `.aireview.yml` and the new inputs are a
+> follow-up (customer-facing — needs human review).
 
 ## Phase 1 — Structured Findings Foundation
 - [x] Task 1: `ReviewFinding` type + `parseFindingsResponse` + new prompt contract (S) — done 2026-06-11, 10 unit tests

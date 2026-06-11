@@ -206,6 +206,28 @@ export abstract class BaseDevOpsService implements DevOpsService {
         console.log(`📄 Files to be processed: ${filePaths.join(', ')}`);
     }
 
+    /** Files at or under this many lines get full content alongside the diff in throttle mode */
+    protected static readonly SMALL_FILE_MAX_LINES = 200;
+
+    /**
+     * Check whether a file is small enough to send in full alongside its diff.
+     * @param content - Full file content
+     */
+    protected isSmallFile(content: string): boolean {
+        return content.split('\n').length <= BaseDevOpsService.SMALL_FILE_MAX_LINES;
+    }
+
+    /**
+     * Append full file content after the diff so the model sees surrounding
+     * context for small files (throttle mode only).
+     * @param diff - Processed diff content
+     * @param fullContent - Full file content
+     */
+    protected appendFullFileContext(diff: string, fullContent: string): string {
+        console.log(`📎 Appending full file context (small file, ${fullContent.split('\n').length} lines)`);
+        return `${diff}\n\n=== Full file context (small file) ===\n${fullContent}`;
+    }
+
     /**
      * Format added file content (prefix each line with +)
      * @param content - Original file content

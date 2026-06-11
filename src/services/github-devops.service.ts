@@ -362,6 +362,17 @@ export class GitHubDevOpsService extends BaseDevOpsService {
                     if (f.patch) {
                         // Use patch as diff-like content
                         content = this.processDiffOutput(f.patch as string);
+                        // For small files, add the full content so the model sees context
+                        if (headSha) {
+                            try {
+                                const fullContent = await this.getGitHubFileContent(owner, repo, filePath, headSha);
+                                if (this.isSmallFile(fullContent)) {
+                                    content = this.appendFullFileContext(content, fullContent);
+                                }
+                            } catch {
+                                // Context is best-effort; the diff alone is still reviewable
+                            }
+                        }
                         this.logProcessEditedFile(filePath, true);
                     } else if (headSha) {
                         content = await this.getGitHubFileContent(owner, repo, filePath, headSha);

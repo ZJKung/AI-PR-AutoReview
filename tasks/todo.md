@@ -24,7 +24,7 @@
 
 ## Phase 5 — Per-Repo Config + Context Ladder
 - [x] Task 9: `.aireview.yml` loader with precedence + safe fallback (M) — done 2026-06-11, 10 unit tests; bundle 4.05 MB after js-yaml
-- [ ] Task 10: Full file content for small files in throttle mode (S) — *parallel-safe with Task 9*
+- [x] Task 10: Full file content for small files (≤200 lines) appended after diff in throttle mode (S) — done 2026-06-11, 2 unit tests
 - [ ] Task 11: PR intent block (title/description/work items) in prompt (S)
 - [ ] **Checkpoint E:** pilot repo end-to-end; token-cost delta measured
 

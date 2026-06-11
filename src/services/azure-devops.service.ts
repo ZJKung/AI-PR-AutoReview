@@ -718,6 +718,9 @@ export class AzureDevOpsService extends BaseDevOpsService {
 
                                 if (targetContent) {
                                     content = await this.getDiffContent(sourceContent, targetContent);
+                                    if (this.isSmallFile(sourceContent)) {
+                                        content = this.appendFullFileContext(content, sourceContent);
+                                    }
                                 } else {
                                     // If target content is unavailable, show full source content
                                     content = this.formatAddedFileContent(sourceContent);

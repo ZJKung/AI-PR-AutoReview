@@ -2,7 +2,7 @@
     "manifestVersion": 1,
     "id": "PatagoniaHealthAICodeReviewer",
     "name": "Patagonia Health AI Code Reviewer",
-    "version": "2.0.0",
+    "version": "2.0.1",
     "publisher": "PatagoniaHealthAICodeReviewer",
     "description": "Automated Code Review for Pull Requests. Supports GitHub Copilot, OpenAI, Google Gemini, Claude, and Grok. Bring your own AI subscription to Azure DevOps.",
     "public": false,

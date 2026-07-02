@@ -72,7 +72,11 @@ export class ClaudeService extends BaseHttpAIService {
     }
 
     protected extractContent(response: any): string {
-        return response.data.content?.[0]?.text || 'No response generated';
+        const text = response.data.content?.[0]?.text;
+        if (!text) {
+            console.log(`⚠️  Claude returned no text content (stop_reason: ${response.data.stop_reason ?? 'unknown'})`);
+        }
+        return text || 'No response generated';
     }
 
     /**
